@@ -1,0 +1,29 @@
+<div id="hx-form_generator" class="g-3" hx-target="this" hx-swap="outerHTML">
+    <form enctype="multipart/form-data" method='post'>{% csrf_token %}
+        {{form.as_p}}
+    </form>
+</div>
+
+<script>
+    function onElementChange(arg){
+        var current = $(arg);
+        var objId = null;
+        if (current.attr('type') == "radio"){
+            objId = current.attr('value')
+        }
+        else if(current[0].type == 'select-one'){
+            objId = current.val()
+        }
+        else{
+            objId = current.attr('instance_id')
+        }
+        $(`*[parent_object_id=${objId}][parent_content_type=${current.attr('content_type')}]`).each(function(index, element) {
+                element.removeAttribute('disabled');
+                element.setAttribute('parent_answer', current.attr('instance_id'))
+        });
+
+        $(`*:not([parent_object_id=${objId}])[parent_content_type=${current.attr('content_type')}][parent_answer=${current.attr('instance_id')}]`).each(function(index, element) {
+                element.setAttribute('disabled', true);
+        });
+    };
+</script>

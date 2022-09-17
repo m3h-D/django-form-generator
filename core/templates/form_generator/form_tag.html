@@ -1,0 +1,6 @@
+{% load static %}
+<script src="{% static 'htmx.min.js' %}" defer></script>
+
+
+<div hx-get="{{url}}" hx-trigger="load" hx-swap="outerHTML">
+</div>

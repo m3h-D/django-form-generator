@@ -1,0 +1,12 @@
+/venv
+/static
+.idea
+.vscode
+.env
+.venv
+env/
+venv/
+__pycache__/
+.history
+**/settings/local.py
+db.*
