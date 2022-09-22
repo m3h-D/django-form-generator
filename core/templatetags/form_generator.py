@@ -1,36 +1,26 @@
 from django import template
 from django.urls import reverse
-from django.http import QueryDict
 from django.utils.safestring import mark_safe
-from django.core.cache import cache
 
-from core.models import Form, FormDetail
-from core.views import FormGeneratorView
-
-
+from core.models import Form, Form
 
 
 register = template.Library()
 
-@register.inclusion_tag('form_generator/form_tag.html')
+
+@register.inclusion_tag('core/tags/form_tag.html')
 def render_form(form_id: int):
     return {'url': reverse('form_generator:form_detail', args=(form_id,))}
 
 
-@register.filter(name='add_attribute')
-def add_attribute(item, attr):
-    for attr_key, attr_value in QueryDict(attr).items():
-        item.field.widget.attrs[attr_key] = item.field.widget.attrs.get(attr_key, '') + ' ' + attr_value
-    return item
-
-@register.simple_tag()
-def render_pre_api(form_id, api_id=None):
+@register.simple_tag(takes_context=True)
+def render_pre_api(context, form_id, api_id=None):
     try:
-        form_detail = FormDetail.objects.filter_valid().get(form_id=form_id)
-    except FormDetail.DoesNotExist:
+        form = Form.objects.filter_valid().get(id=form_id)
+    except Form.DoesNotExist:
         return 'Form id is not valid'
     else:
-        responses = form_detail.form.render_pre_apis()
+        responses = form.render_pre_apis({'request': context['request']})
         if api_id:
             responses = mark_safe(next((result for api_id_, result in responses if api_id_ == api_id)))
         else:
@@ -38,14 +28,14 @@ def render_pre_api(form_id, api_id=None):
         return responses
 
 
-@register.simple_tag()
-def render_post_api(form_id, api_id=None):
+@register.simple_tag(takes_context=True)
+def render_post_api(context, form_id, api_id=None):
     try:
-        form_detail = FormDetail.objects.filter_valid().get(form_id=form_id)
-    except FormDetail.DoesNotExist:
+        form = Form.objects.filter_valid().get(id=form_id)
+    except Form.DoesNotExist:
         return 'Form id is not valid'
     else:
-        responses = form_detail.form.render_post_apis()
+        responses = form.render_post_apis({'request': context['request']})
         if api_id:
             responses = mark_safe(next((result for api_id_, result in responses if api_id_ == api_id)))
         else:

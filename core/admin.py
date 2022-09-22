@@ -1,14 +1,11 @@
 import uuid
 from django.contrib import admin
+from django.utils.text import slugify
 
 from core import consts
 from core.forms import FormTemplateForm
-from core.models import Form, FormDetail, Field, FormFieldThrough, FormTemplate, Value, FormResponse, FormAPIThrough, FieldValueThrough, FormAPIManager
+from core.models import FieldCategory, Form, Field, FormFieldThrough, FormTemplate, Value, FormResponse, FormAPIThrough, FieldValueThrough, FormAPIManager
 # Register your models here.
-
-class FormDetailInlineAdmin(admin.StackedInline):
-    model = FormDetail
-    extra = 1
 
 class FormFieldThroughInlineAdmin(admin.TabularInline):
     model = FormFieldThrough
@@ -22,7 +19,7 @@ class FormAPIThroughInlineAdmin(admin.TabularInline):
 
 @admin.register(Form)
 class FormAdmin(admin.ModelAdmin):
-    inlines = [FormDetailInlineAdmin, FormFieldThroughInlineAdmin, FormAPIThroughInlineAdmin]
+    inlines = [FormFieldThroughInlineAdmin, FormAPIThroughInlineAdmin]
 
     actions = ('clone_action', )
 
@@ -59,10 +56,10 @@ class FieldValueThroughInlineAdmin(admin.TabularInline):
 @admin.register(Field)
 class FieldAdmin(admin.ModelAdmin):
     inlines = [FieldValueThroughInlineAdmin]
-    prepopulated_fields = {'name': ('label',)}
+    readonly_fields = ['name']
 
     def save_form(self, request, form, change):
-        form.instance.name = form.instance.name.replace('-', '_')
+        form.instance.name = slugify(form.instance.label, True).replace('-', '_')
         return super().save_form(request, form, change)
 
 
@@ -74,4 +71,4 @@ class TemplateFormAdmin(admin.ModelAdmin):
 admin.site.register(FormResponse)
 admin.site.register(Value)
 admin.site.register(FormAPIManager)
-admin.site.register(FormDetail)
+admin.site.register(FieldCategory)

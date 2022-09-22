@@ -138,3 +138,5 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 FORM_EVALUATIONS = {'form_data': '{{form_data}}'}
+
+FORM_RESPONSE_SAVE = 'core.models.save_form_response'

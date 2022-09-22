@@ -1,11 +1,10 @@
 import pathlib
 from sys import platform
+from turtle import position
 from django.db import models
 from django.core.validators import RegexValidator
 from django.utils.translation import gettext_lazy as _
 from django.contrib.contenttypes.fields import GenericForeignKey
-from django.core.mail import EmailMessage
-from django.conf import settings
 from django.core.cache import cache
 
 
@@ -13,14 +12,14 @@ from common.models import BaseModel
 from common.utils import APICall, evaluate_data
 
 from core import consts
-from core.managers import FormDetailManager
+from core.managers import FormManager
 
 CONTENT_TYPE_MODELS_LIMIT = models.Q(app_label='core', model='field') | \
                             models.Q(app_label='core', model='value')
 
 
 class FieldCategory(BaseModel):
-    title = models.CharField(_("Title"), max_length=200)
+    title = models.CharField(_("Title"), max_length=200, unique=True)
     is_active = models.BooleanField(_("Is Active"), default=True)
     parent = models.ForeignKey("self", verbose_name=_("Parent Category"), on_delete=models.CASCADE,
                                blank=True, null=True, limit_choices_to={'is_active': True}, related_name='children')
@@ -41,16 +40,31 @@ class FieldCategory(BaseModel):
     def __str__(self) -> str:
         return self.title
 
+    def get_fields(self):
+        return self.fields.filter(is_active=True) #type: ignore
+
 
 class Form(BaseModel):
     title = models.CharField(_("Title"), max_length=200)
     slug = models.SlugField(_("Slug"), unique=True, allow_unicode=True)
     status = models.CharField(_("Status"), max_length=50,
                               choices=consts.FormStatus.choices, default=consts.FormStatus.DRAFT)
+    submit_text = models.CharField(
+        _("Submit Text"), max_length=100, default=_('Submit'))
+    redirect_url = models.URLField(
+        _("Redirect URL"), max_length=200, blank=True, null=True)
+    success_message = models.CharField(_("Success Message"), max_length=255, blank=True, null=True)
+    template = models.ForeignKey("core.FormTemplate", verbose_name=_(
+        "Template"), on_delete=models.SET_NULL, blank=True, null=True, related_name='forms', limit_choices_to={'is_active': True})
+    limit_to = models.PositiveIntegerField(_("Limit Submiting Form"), blank=True, null=True)
+    valid_from = models.DateTimeField(_("Valid From"), blank=True, null=True)
+    valid_to = models.DateTimeField(_("Valid To"), blank=True, null=True)
     fields = models.ManyToManyField("core.Field", verbose_name=_(
         "Fields"), through='core.FormFieldThrough', related_name='forms')
     apis = models.ManyToManyField("core.FormAPIManager", verbose_name=_(
         "Apis"), through='core.FormAPIThrough', related_name='forms')
+
+    objects: FormManager = FormManager()
 
     class Meta:
         verbose_name = _("Form")
@@ -65,105 +79,96 @@ class Form(BaseModel):
     def __str__(self) -> str:
         return self.title
 
-    def call_post_apis(self, response_data=None):
-        #TODO: make it background task
-        cache_ = cache.get(f'Form_APIs_{self.pk}_post')
-        if cache_:
-            return cache_
+    def __call_apis(self, execute_time: consts.FormAPIManagerExecuteTime, response_data: dict):
+        cache_key = f"FormAPIs_{execute_time}_{response_data['request'].session.session_key}"
+        cached_response = cache.get(cache_key)
+        if cached_response: return cached_response
+
         responses = []
         for api in self.apis.filter(is_active=True,
-                                    execute_time=consts.FormAPIManagerExecuteTime.POST_LOAD): 
+                                    execute_time=execute_time): 
             api: FormAPIManager
             response = APICall(api.method.lower(), api.url, api.body, response_data, headers=api.headers)
             status_code, result = response.get_result()
             responses.append((api, status_code, result))
-        cache.set(f'Form_APIs_{self.pk}_post', responses)
+        cache.set(cache_key, responses)
         return responses
 
-    def render_post_apis(self, response_data=None):
+
+    def call_post_apis(self, response_data: dict):
+        return self.__call_apis(consts.FormAPIManagerExecuteTime.POST_LOAD, response_data)
+
+    def render_post_apis(self, response_data: dict):
         data = []
         results = self.call_post_apis(response_data)
         for api, _, result in results:
-            api: FormAPIManager
-            if api.show_result:
-                res = evaluate_data(api.response, result)
-                data.append(res)
+            res = evaluate_data(api.response, result)
+            data.append(res)
         return data
 
-    def call_pre_apis(self, response_data=None):
-        #TODO: make it background task
-        cache_ = cache.get(f'Form_APIs_{self.pk}_pre')
-        if cache_:
-            return cache_
-        responses = []
-        for api in self.apis.filter(is_active=True,
-                                    execute_time=consts.FormAPIManagerExecuteTime.PRE_LOAD): 
-            api: FormAPIManager
-            response = APICall(api.method.lower(), api.url, api.body, response_data, headers=api.headers)
-            status_code, result = response.get_result()
-            responses.append((api, status_code, result))
-        cache.set(f'Form_APIs_{self.pk}_pre', responses)
-        return responses
+    def call_pre_apis(self, response_data: dict):
+        return self.__call_apis(consts.FormAPIManagerExecuteTime.PRE_LOAD, response_data)
 
         
-    def render_pre_apis(self, response_data=None):
+    def render_pre_apis(self, response_data: dict):
         data = []
         results = self.call_pre_apis(response_data)
         for api, _, result in results:
-            api: FormAPIManager
-            if api.show_result:
-                res = evaluate_data(api.response, result)
-                data.append((api.pk, res))
+            res = evaluate_data(api.response, result)
+            data.append((api.pk, res))
         return data
 
     def get_fields(self):
-        return self.fields.filter(is_active=True).order_by('category__weight', 'form_field_through__id')
-            
+        return self.fields.filter(is_active=True).order_by(models.F('form_field_through__category__weight').asc(nulls_last=True), 
+                                                                    'form_field_through__id')
+
+    def save_response(self, data, user_ip):
+        api_response = []
+        pre_result = self.call_pre_apis(data)
+        post_result = self.call_post_apis(data)
+        api_response.append(self._generate_api_result(pre_result))
+        api_response.append(self._generate_api_result(post_result))
+        response = FormResponse.objects.create(data=self._generate_data(data), 
+                                    user_ip=user_ip, 
+                                    api_response=api_response, 
+                                    form=self)
+        return response
+    
+    def _generate_api_result(self, results):
+        data = []
+        for api, status_code, result in results:
+            data.append({
+                "api": api.id,
+                "url": api.url,
+                "method": api.method,
+                "body": api.body,
+                "response_status_code": status_code,
+                "result": result
+            })
+        return data
 
 
-class FormDetail(BaseModel):
-    form = models.OneToOneField(
-        "core.Form", verbose_name=_("Form"), on_delete=models.CASCADE, related_name='detail')
-    submit_text = models.CharField(
-        _("Submit Text"), max_length=100, default=_('Submit'))
-    redirect_url = models.URLField(
-        _("Redirect URL"), max_length=200, blank=True, null=True)
-    success_message = models.CharField(_("Success Message"), max_length=255)
-    template = models.ForeignKey("core.FormTemplate", verbose_name=_(
-        "Template"), on_delete=models.SET_NULL, blank=True, null=True, related_name='forms', limit_choices_to={'is_active': True})
-    send_mail = models.BooleanField(_("Send E-mail"), default=False)
-    mail_seubject = models.CharField(
-        _("Mail Subject"), max_length=200, blank=True, null=True)
-    mail_to = models.CharField(
-        _("Mail To"), max_length=500, blank=True, null=True)
-    mail_bcc = models.CharField(
-        _("Mail BCC"), max_length=500, blank=True, null=True)
-    mail_message = models.TextField(_("Mail Message"), blank=True, null=True, help_text=_(
-        'You can use form fields name in this box eg: {{field_name}} or {{form_data}} to send all user data'))
-    limit_to = models.PositiveIntegerField(_("Limit Submiting Form"), blank=True, null=True)
-    valid_from = models.DateTimeField(_("Valid From"), blank=True, null=True)
-    valid_to = models.DateTimeField(_("Valid To"), blank=True, null=True)
+    def _generate_data(self, form_data):
+        data = []
+        for field in self.get_fields():
+            if field.genre == consts.FieldGenre.CAPTCHA:
+                continue
+            category_title = None
+            category = field.form_field_through.filter(form_id=self.pk).last().category
+            if category:
+                category_title = category.title
+            data.append(
+                {
+                    "id": field.id,
+                    "name": field.name,
+                    "label": field.label,
+                    "genre": field.genre,
+                    "category": category_title,
+                    "value": form_data[field.name]
+                }
+            )
+        return data
 
-    objects = FormDetailManager()
-
-    class Meta:
-        verbose_name = _("Form Detail")
-        verbose_name_plural = _("Form Details")
-
-    def __str__(self) -> str:
-        return str(self.form)
-
-    def send_email(self, response_data=None):
-        #TODO: make it background task
-        if response_data is not None:
-            data_ = evaluate_data(self.mail_message, response_data)
-            self.content = ' '.join(data_) if isinstance(data_, list) else data_
-        email = EmailMessage(self.mail_seubject,
-                            self.mail_message,
-                            settings.EMAIL_FROM,
-                            self.mail_to.split(','),
-                            self.mail_bcc.split(','))
-        return email.send()
 
 
 class FormFieldThrough(models.Model):
@@ -171,6 +176,9 @@ class FormFieldThrough(models.Model):
         "Form"), on_delete=models.CASCADE, related_name='form_field_through')
     field = models.ForeignKey("core.Field", verbose_name=_(
         "Field"), on_delete=models.CASCADE, related_name='form_field_through')
+    position = models.CharField(_("Position"), max_length=100, choices=consts.FieldPosition.choices, default=consts.FieldPosition.BREAK)
+    category = models.ForeignKey("core.FieldCategory", verbose_name=_("Category"), on_delete=models.SET_NULL, blank=True, null=True,
+                                 limit_choices_to={'is_active': True}, related_name='form_field_through')
 
     def __str__(self) -> str:
         return f'{self.form.title} | {self.field.name}'
@@ -192,8 +200,6 @@ class Field(BaseModel):
         _("Regex Pattern"), max_length=500, blank=True, null=True)
     error_message = models.CharField(
         _("Error Message"), max_length=200, blank=True, null=True)
-    category = models.ForeignKey("core.FieldCategory", verbose_name=_("Category"), on_delete=models.SET_NULL, blank=True, null=True,
-                                 limit_choices_to={'is_active': True})
     weight = models.PositiveIntegerField(_("Weight"))
     values = models.ManyToManyField("core.Value", through='core.FieldValueThrough', verbose_name=_(
         "Values"), related_name='fields', help_text=_("Only for multi value fields like Dropdown, Radio, Checkbox, etc..."))
@@ -227,9 +233,6 @@ class Field(BaseModel):
                  'help_text': self.help_text,
                  'label': self.label}
 
-        if self.content_object is not None:
-            attrs.update({'disabled': True})
-
         if self.error_message:
             attrs.update({'error_messages': {'Invalid': self.error_message}})
 
@@ -244,20 +247,28 @@ class Field(BaseModel):
             attrs.update(extra_attrs)
         return attrs
 
-    def build_widget_attrs(self, extra_attrs: dict|None=None):
+    def build_widget_attrs(self, form, extra_attrs: dict|None=None):
         attrs = {'instance_id': self.pk}
+        form_field_through = self.form_field_through.filter(form_id=form.id).last() #type: ignore
 
+        if self.content_object is not None:
+            attrs.update({'disabled': True})
+            
         if self.content_object is not None:
             attrs.update({'parent_object_id': self.object_id,
                         'parent_content_type': self.content_type.model})
         else:
             attrs.update({'onchange': 'onElementChange(this)'})
 
-        if self.category is not None:
-            attrs.update({'category': self.category.title})
+        if form_field_through.category is not None:
+            attrs.update({'category': form_field_through.category.title})
 
         if self.placeholder is not None:
             attrs.update({'placeholder': self.placeholder})
+
+        attrs.update({'position': form_field_through.position})
+
+
         if extra_attrs:
             attrs.update(extra_attrs)
         return attrs
@@ -318,6 +329,7 @@ class FormTemplate(BaseModel):
             return '/'.join(parts[index+1:])
         return self.directory
 
+
 class FormAPIThrough(models.Model):
     form = models.ForeignKey("core.Form", verbose_name=_(
         "Form"), on_delete=models.CASCADE, related_name='form_apis')
@@ -339,7 +351,6 @@ class FormAPIManager(BaseModel):
         _("Execute Time"), max_length=50, choices=consts.FormAPIManagerExecuteTime.choices)
     response = models.TextField(_("Response"), blank=True, null=True)
     is_active = models.BooleanField(_("Is Active"))
-    show_result = models.BooleanField(_("Show Result"), default=False)
     weight = models.PositiveIntegerField(_("Weight"))
 
     class Meta:
@@ -378,16 +389,13 @@ class FormResponse(BaseModel):
 
     @property
     def pure_data(self):
-        """self.data sample:
-            [{
-                "id": 1,
-                "name": "field_name",
-                "label": "field_label",
-                "genre": "text_input",
-                "value": "User input data"
-            }]
-        """
         result = {}
         for d in self.data:
             result[d['name']] = d['value'] #* {field_name: User input data}
         return result
+
+
+
+def save_form_response(form: Form, form_data: dict, user_ip: str):
+    #* You can access `request` from form_data
+    form.save_response(form_data, user_ip)

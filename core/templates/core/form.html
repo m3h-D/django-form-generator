@@ -1,5 +1,5 @@
 <div id="hx-form_generator" class="g-3" hx-target="this" hx-swap="outerHTML">
-    <form enctype="multipart/form-data" method='post'>{% csrf_token %}
+    <form id="form-generator_{{form.instance.id}}" enctype="multipart/form-data" method='post'>{% csrf_token %}
         {{form.as_p}}
     </form>
 </div>

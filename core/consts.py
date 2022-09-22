@@ -35,3 +35,8 @@ class FormAPIManagerMethod(TextChoices):
 class FormAPIManagerExecuteTime(TextChoices):
     PRE_LOAD = 'pre_load', _('Pre load')
     POST_LOAD = 'post_load', _('Post load')
+
+class FieldPosition(TextChoices):
+    INLINE = 'inline', _('In-line')
+    INORDER = 'inorder', _('In-Order')
+    BREAK = 'break', _('Break')

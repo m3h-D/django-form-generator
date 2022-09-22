@@ -21,7 +21,8 @@ def get_client_ip(request):
             ip = proxies[0]
     return ip
 
-def evaluate_data(data: str, replace_with: dict | list) -> str | list:
+
+def evaluate_data(data: str, replace_with: dict|list) -> str | list:
     """replace data that wrapped in a pattern like: {{sample}} with provided dictionary
 
     Args:
@@ -46,22 +47,22 @@ def evaluate_data(data: str, replace_with: dict | list) -> str | list:
     else:
         return replace_with
 
+
 class APICall:
 
     def __init__(self, method, url, body: str|None=None, data_response: dict|list|None=None, **kwargs):
         request = getattr(requests, method)
-        self.result = None
-        self.status_code = None
         if data_response is not None:
             url = evaluate_data(url, data_response)
         if method == FormAPIManagerMethod.GET:
             response = request(url, **kwargs)
         else:
             if data_response is not None:
-                body = evaluate_data(body, data_response)
+                body = evaluate_data(body, data_response) #type: ignore
             response = request(url, data=body, **kwargs)
         result = response.json()
-        self.status_code, self.result = response.status_code, result
+        self.status_code: int = response.status_code
+        self.result: dict = result
 
-    def get_result(self):
+    def get_result(self) -> tuple[int, dict]:
         return  self.status_code, self.result
