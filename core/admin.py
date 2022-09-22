@@ -1,10 +1,21 @@
 import uuid
 from django.contrib import admin
 from django.utils.text import slugify
+from django.urls import reverse
+from django.utils.safestring import mark_safe
 
 from core import consts
 from core.forms import FormTemplateForm
-from core.models import FieldCategory, Form, Field, FormFieldThrough, FormTemplate, Value, FormResponse, FormAPIThrough, FieldValueThrough, FormAPIManager
+from core.models import (FieldCategory, 
+                        Form, 
+                        Field, 
+                        FormFieldThrough, 
+                        FormTemplate, 
+                        Value, 
+                        FormResponse, 
+                        FormAPIThrough, 
+                        FieldValueThrough, 
+                        FormAPIManager)
 # Register your models here.
 
 class FormFieldThroughInlineAdmin(admin.TabularInline):
@@ -68,7 +79,20 @@ class TemplateFormAdmin(admin.ModelAdmin):
     form = FormTemplateForm
 
 
-admin.site.register(FormResponse)
+@admin.register(FormResponse)
+class FormResponseAdmin(admin.ModelAdmin):
+    list_display = ['id', 'get_form_title', 'user_ip', 'show_response']
+    list_display_links = ['id', 'get_form_title']
+
+    @admin.display(description="Form Title")
+    def get_form_title(self, obj):
+        return obj.form.title
+
+    @admin.display(description="Response")
+    def show_response(self, obj):
+        return mark_safe(f"<a href='{reverse('form_generator:form_response', args=(obj.id, ))}'>Response</a>")
+
+
 admin.site.register(Value)
 admin.site.register(FormAPIManager)
 admin.site.register(FieldCategory)

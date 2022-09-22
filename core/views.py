@@ -9,7 +9,7 @@ from django_htmx.http import HttpResponseClientRedirect
 # Create your views here.
 
 from common.utils import get_client_ip
-from core.models import Form
+from core.models import Form, FormResponse
 from core.forms import FormGeneratorForm
 
 
@@ -54,3 +54,19 @@ class FormGeneratorView(FormMixin, DetailView):
         if self.request.htmx:
             return HttpResponseClientRedirect(self.get_success_url())
         return HttpResponseRedirect(self.get_success_url())
+
+
+class FormResponseView(FormMixin, DetailView):
+    queryset = FormResponse.objects.all()
+    model = FormResponse
+    template_name = "core/form_response.html"
+    form_class = FormGeneratorForm
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.update({"request": self.request,
+                        "instance": self.object.form,
+                        "form_response": self.object,
+                        "user_ip": get_client_ip(self.request), 
+                        })
+        return kwargs

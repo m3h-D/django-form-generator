@@ -16,13 +16,13 @@ class CustomeSelectFormField(forms.Select):
 
 class FormGeneratorForm(forms.Form):
     
-    def __init__(self, request, instance, user_ip, *args, **kwargs):
+    def __init__(self, request, instance, user_ip, *args, form_response=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user_ip = user_ip
         self.instance: Form = instance
         self.request = request
         self.template_name_p = getattr(self.instance.template, 'get_directory', self.template_name_p)
-        for field in self.instance.get_fields():
+        for i, field in enumerate(self.instance.get_fields()):
             field_name = field.name
             method = f'prepare_{field.genre}'
             if hasattr(self, method):
@@ -30,6 +30,9 @@ class FormGeneratorForm(forms.Form):
             if self.data and self.fields[field_name].disabled:
                 self.fields[field_name].disabled = False
                 self.fields[field_name].initial = self.data.get(field_name, None)
+            if form_response is not None:
+                self.fields[field_name].widget.attrs.update({'disabled': True})
+                self.fields[field_name].initial = form_response.data[i].get('value', None)
 
 
 
