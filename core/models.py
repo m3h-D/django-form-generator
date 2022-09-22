@@ -80,7 +80,7 @@ class Form(BaseModel):
         return self.title
 
     def __call_apis(self, execute_time: consts.FormAPIManagerExecuteTime, response_data: dict):
-        cache_key = f"FormAPIs_{execute_time}_{response_data['request'].session.session_key}"
+        cache_key = f"FormAPIs_{self.pk}_{execute_time}_{response_data['request'].session.session_key}"
         cached_response = cache.get(cache_key)
         if cached_response: return cached_response
 
