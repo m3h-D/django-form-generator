@@ -10,9 +10,9 @@ __pycache__/
 .history
 **/settings/local.py
 db.*
-# core
-# /media
-# /staticfiles
-# .env.dist
-# manage.py
-# requirements.txt
+core
+/media
+/staticfiles
+.env.dist
+manage.py
+requirements.txt
