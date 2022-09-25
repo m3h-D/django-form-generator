@@ -15,4 +15,3 @@ core
 /staticfiles
 .env.dist
 manage.py
-requirements.txt
