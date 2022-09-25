@@ -1,0 +1,26 @@
+{% extends 'form_generator/base.html' %}
+{% load i18n %}
+
+{% block extra_head %}
+{% if form.instance.direction == 'ltr' %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet"
+integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
+{% else %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.rtl.min.css" 
+integrity="sha384-OXTEbYDqaX2ZY/BOaZV/yFGChYHtrXH2nyXJ372n2Y8abBhrqacCEe+3qhSHtLjy" crossorigin="anonymous">
+{% endif %}
+{% endblock extra_head %}
+
+{% block content %}
+<div dir="{{form.instance.direction}}" >
+    <h4 class='my-5'>{%trans 'Title'%}: {{form.instance.title}}</h4>
+    <div id="hx-form_generator" class="g-3" hx-target="this" hx-swap="outerHTML">
+        <form id="form-generator_{{form.instance.id}}" enctype="multipart/form-data">
+            {{form.as_p}}
+        </form>
+        
+        <h5 class='my-5'>{%trans 'User'%}: {{object.user_ip}}</h5>
+        
+    </div>
+</div>
+{% endblock content %}

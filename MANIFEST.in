@@ -1,0 +1,4 @@
+include LICENSE
+include README.rst
+recursive-include form_generator/static *
+recursive-include form_generator/templates *
