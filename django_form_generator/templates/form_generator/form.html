@@ -1,4 +1,4 @@
-{% extends 'form_generator/base.html' %}
+{% extends 'django_form_generator/base.html' %}
 
 {% block extra_head %}
 {% if form.instance.direction == 'ltr' %}
@@ -11,7 +11,7 @@ integrity="sha384-OXTEbYDqaX2ZY/BOaZV/yFGChYHtrXH2nyXJ372n2Y8abBhrqacCEe+3qhSHtL
 {% endblock extra_head %}
 
 {% block content %}
-<div id="hx-form_generator" class="g-3" hx-target="this" hx-swap="outerHTML">
+<div id="hx-django_form_generator" class="g-3" hx-target="this" hx-swap="outerHTML">
     <form dir="{{form.instance.direction}}" id="form-generator_{{form.instance.id}}" enctype="multipart/form-data" method='post'>{% csrf_token %}
         {{form.as_p}}
     </form>

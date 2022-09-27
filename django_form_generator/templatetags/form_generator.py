@@ -2,15 +2,15 @@ from django import template
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from form_generator.models import Form, Form
+from django_form_generator.models import Form, Form
 
 
 register = template.Library()
 
 
-@register.inclusion_tag('form_generator/tags/form_tag.html')
+@register.inclusion_tag('django_form_generator/tags/form_tag.html')
 def render_form(form_id: int):
-    return {'url': reverse('form_generator:form_detail', args=(form_id,))}
+    return {'url': reverse('django_form_generator:form_detail', args=(form_id,))}
 
 
 @register.simple_tag(takes_context=True)

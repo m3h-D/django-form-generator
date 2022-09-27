@@ -46,6 +46,6 @@ class FormDirection(TextChoices):
     RTL = 'rtl', _('RTL')
 
 class FormTheme(TextChoices):
-    INLINE = 'form_generator/fields/inline_fields.html', _('In-line Theme')
-    INORDER = 'form_generator/fields/inorder_fields.html', _('In-order Theme')
-    DYNAMIC = 'form_generator/fields/dynamic_fields.html', _('Dynamic Theme')
+    INLINE = 'django_form_generator/fields/inline_fields.html', _('In-line Theme')
+    INORDER = 'django_form_generator/fields/inorder_fields.html', _('In-order Theme')
+    DYNAMIC = 'django_form_generator/fields/dynamic_fields.html', _('Dynamic Theme')

@@ -1,14 +1,12 @@
 
 # Django Form Generator
 
-
-
 django form generator will help you create forms very easily.
 you can use it any where in your html files.
 
 there is an API-manager tool for you to call some APIs on loading form or after submit.
 
-
+---
 ## Installation
 ---
 - install it via pip:
@@ -17,17 +15,15 @@ there is an API-manager tool for you to call some APIs on loading form or after 
   pip install django-form-generator
   ```
 
-- add `form_generator` to your `INSTALLED_APPS`:
-
+- add (`'django_form_generator'`, `'django_htmx'`, `'crispy_forms'`, `'crispy_bootstrap5'`, `'captcha'`) to your `INSTALLED_APPS`:
   ```python
   INSTALLED_APPS = [
-    ...
-    'django_htmx',
-    'crispy_forms',
-    'crispy_bootstrap5',
-    'captcha',
-    'form_generator',
-    ...
+      ...
+      'django_htmx',
+      'crispy_forms',
+      'crispy_bootstrap5',
+      'captcha',
+      'django_form_generator',
   ]
   ```
 
@@ -43,7 +39,7 @@ there is an API-manager tool for you to call some APIs on loading form or after 
   python manage.py collectstatic
   ```
 
-- finally include form_generator urls to your `urls.py`
+- finally include django_form_generator urls to your `urls.py`
   ```python
 
   from django.contrib import admin
@@ -52,8 +48,7 @@ there is an API-manager tool for you to call some APIs on loading form or after 
   urlpatterns = [
     path('admin/', admin.site.urls),
     ...
-    path('form-generator/', include(('form_generator.urls', 'form_generator'), namespace='form_generator')),
-    
+    path('form-generator/', include('django_form_generator.urls')),
     ...
   ]
   ```
@@ -79,7 +74,7 @@ there is an API-manager tool for you to call some APIs on loading form or after 
   </head>
 
   <body>
-      {% load form_generator %}
+      {% load django_form_generator %}
 
       {% render_form 1 %} {# it will render the form that has id of 1 #}
 
@@ -99,7 +94,7 @@ there is an API-manager tool for you to call some APIs on loading form or after 
     *CK-Editor example*
     <picture>
 
-      <img alt="Shows an example usage on cd-editor" src="form_generator/docs/images/ckEditor.png">
+      <img alt="Shows an example usage on cd-editor" src="django_form_generator/docs/images/ckEditor.png">
 
     </picture>
 
@@ -114,7 +109,7 @@ there is an API-manager tool for you to call some APIs on loading form or after 
     </head>
 
     <body>
-        {% load form_generator %}
+        {% load django_form_generator %}
 
         {{ object.rich_text_field|eval_data }}
 
@@ -134,7 +129,7 @@ there is an API-manager tool for you to call some APIs on loading form or after 
     >Note: `first_name`, `last_name` and `job` are the name of the fields that are defined in a form which this api is assigned to.
     <picture>
 
-      <img alt="create a body with the fields name of a form" src="form_generator/docs/images/apiManagerCreateUser.png">
+      <img alt="create a body with the fields name of a form" src="django_form_generator/docs/images/apiManagerCreateUser.png">
 
     </picture>
 
@@ -158,7 +153,7 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
     - **example:**
     <picture>
 
-      <img alt="create a body with the fields name of a form" src="form_generator/docs/images/apiManagerGetUser.png">
+      <img alt="create a body with the fields name of a form" src="django_form_generator/docs/images/apiManagerGetUser.png">
 
     </picture>
     
@@ -207,7 +202,7 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
   </head>
 
   <body>
-      {% load form_generator %}
+      {% load django_form_generator %}
 
       {% render_pre_api 1 %} {# it will render all pre apis that are assigned to a form with id of 1 #}
 
@@ -269,7 +264,7 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
           ```
       2. *myproject/settings.py*
           ```python
-            FORM_GENERATOR = {
+            DJANGO_FORM_GENERATOR = {
               "FORM_THEME_CHOICES": "myapp.const.CustomFormGeneratorTheme"
             }
           ```
@@ -281,24 +276,24 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
   # to access the form you can call this url:
   """GET: http://127.0.0.1:8000/form-generator/form/1/"""
   #or 
-  reverse('form_generator:form_detail', kwargs={'pk': 1})
+  reverse('django_form_generator:form_detail', kwargs={'pk': 1})
 
   # to access the response of the form you can call this url
   """GET: http://127.0.0.1:8000/form-generator/form-response/1/"""
   #or
-  reverse('form_generator:form_response', kwargs={'pk': 1})
+  reverse('django_form_generator:form_response', kwargs={'pk': 1})
   ```
 
 - ### Settings:
-  **below is the default settings for form_generator. you can change them by adding it to your `settings.py`**
+  **below is the default settings for django_form_generator. you can change them by adding it to your `settings.py`**
   ```python
-      FORM_GENERATOR = {
-        'FORM_RESPONSE_SAVE': 'form_generator.models.save_form_response',
+      DJANGO_FORM_GENERATOR = {
+        'FORM_RESPONSE_SAVE': 'django_form_generator.models.save_form_response',
         'FORM_EVALUATIONS': {'form_data': '{{form_data}}'},
         'MAX_UPLOAD_FILE_SIZE': 5242880, # default: 50 mb 
-        'FORM_GENERATOR_FORM': 'form_generator.forms.FormGeneratorForm',
-        'FORM_GENERATOR_RESPONSE_FORM': 'form_generator.forms.FormGeneratorResponseForm',
-        'FORM_THEME_CHOICES': 'form_generator.const.FormTheme',
+        'FORM_GENERATOR_FORM': 'django_form_generator.forms.FormGeneratorForm',
+        'FORM_GENERATOR_RESPONSE_FORM': 'django_form_generator.forms.FormGeneratorResponseForm',
+        'FORM_THEME_CHOICES': 'django_form_generator.const.FormTheme',
       }
   ```
 

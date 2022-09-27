@@ -163,32 +163,32 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='formresponse',
             name='form',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='responses', to='form_generator.form', verbose_name='Form'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='responses', to='django_form_generator.form', verbose_name='Form'),
         ),
         migrations.AddField(
             model_name='formfieldthrough',
             name='category',
-            field=models.ForeignKey(blank=True, limit_choices_to={'is_active': True}, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='form_field_through', to='form_generator.fieldcategory', verbose_name='Category'),
+            field=models.ForeignKey(blank=True, limit_choices_to={'is_active': True}, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='form_field_through', to='django_form_generator.fieldcategory', verbose_name='Category'),
         ),
         migrations.AddField(
             model_name='formfieldthrough',
             name='field',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='form_field_through', to='form_generator.field', verbose_name='Field'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='form_field_through', to='django_form_generator.field', verbose_name='Field'),
         ),
         migrations.AddField(
             model_name='formfieldthrough',
             name='form',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='form_field_through', to='form_generator.form', verbose_name='Form'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='form_field_through', to='django_form_generator.form', verbose_name='Form'),
         ),
         migrations.AddField(
             model_name='formapithrough',
             name='api',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='form_apis', to='form_generator.formapimanager', verbose_name='API'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='form_apis', to='django_form_generator.formapimanager', verbose_name='API'),
         ),
         migrations.AddField(
             model_name='formapithrough',
             name='form',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='form_apis', to='form_generator.form', verbose_name='Form'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='form_apis', to='django_form_generator.form', verbose_name='Form'),
         ),
         migrations.AddIndex(
             model_name='formapimanager',
@@ -205,37 +205,37 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='form',
             name='apis',
-            field=models.ManyToManyField(related_name='forms', through='form_generator.FormAPIThrough', to='form_generator.formapimanager', verbose_name='Apis'),
+            field=models.ManyToManyField(related_name='forms', through='django_form_generator.FormAPIThrough', to='django_form_generator.formapimanager', verbose_name='Apis'),
         ),
         migrations.AddField(
             model_name='form',
             name='fields',
-            field=models.ManyToManyField(related_name='forms', through='form_generator.FormFieldThrough', to='form_generator.field', verbose_name='Fields'),
+            field=models.ManyToManyField(related_name='forms', through='django_form_generator.FormFieldThrough', to='django_form_generator.field', verbose_name='Fields'),
         ),
         migrations.AddField(
             model_name='fieldvaluethrough',
             name='field',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='field_values', to='form_generator.field', verbose_name='Field'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='field_values', to='django_form_generator.field', verbose_name='Field'),
         ),
         migrations.AddField(
             model_name='fieldvaluethrough',
             name='value',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='field_values', to='form_generator.value', verbose_name='Value'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='field_values', to='django_form_generator.value', verbose_name='Value'),
         ),
         migrations.AddField(
             model_name='fieldcategory',
             name='parent',
-            field=models.ForeignKey(blank=True, limit_choices_to={'is_active': True}, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='children', to='form_generator.fieldcategory', verbose_name='Parent Category'),
+            field=models.ForeignKey(blank=True, limit_choices_to={'is_active': True}, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='children', to='django_form_generator.fieldcategory', verbose_name='Parent Category'),
         ),
         migrations.AddField(
             model_name='field',
             name='content_type',
-            field=models.ForeignKey(blank=True, limit_choices_to=models.Q(models.Q(('app_label', 'form_generator'), ('model', 'field')), models.Q(('app_label', 'form_generator'), ('model', 'value')), _connector='OR'), null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='fields', to='contenttypes.contenttype', verbose_name='Depends On Object'),
+            field=models.ForeignKey(blank=True, limit_choices_to=models.Q(models.Q(('app_label', 'django_form_generator'), ('model', 'field')), models.Q(('app_label', 'django_form_generator'), ('model', 'value')), _connector='OR'), null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='fields', to='contenttypes.contenttype', verbose_name='Depends On Object'),
         ),
         migrations.AddField(
             model_name='field',
             name='values',
-            field=models.ManyToManyField(help_text='Only for multi value fields like Dropdown, Radio, Checkbox, etc...', related_name='fields', through='form_generator.FieldValueThrough', to='form_generator.value', verbose_name='Values'),
+            field=models.ManyToManyField(help_text='Only for multi value fields like Dropdown, Radio, Checkbox, etc...', related_name='fields', through='django_form_generator.FieldValueThrough', to='django_form_generator.value', verbose_name='Values'),
         ),
         migrations.AddIndex(
             model_name='formresponse',

@@ -6,9 +6,9 @@ DEFAULTS = {
     'FORM_RESPONSE_SAVE': 'form_generator.models.save_form_response',
     'FORM_EVALUATIONS': {'form_data': '{{form_data}}'},
     'MAX_UPLOAD_FILE_SIZE': 5242880,
-    'FORM_GENERATOR_FORM': 'form_generator.forms.FormGeneratorForm',
-    'FORM_GENERATOR_RESPONSE_FORM': 'form_generator.forms.FormGeneratorResponseForm',
-    'FORM_THEME_CHOICES': 'form_generator.const.FormTheme',
+    'FORM_GENERATOR_FORM': 'django_form_generator.forms.FormGeneratorForm',
+    'FORM_GENERATOR_RESPONSE_FORM': 'django_form_generator.forms.FormGeneratorResponseForm',
+    'FORM_THEME_CHOICES': 'django_form_generator.const.FormTheme',
 }
 
 
@@ -53,7 +53,7 @@ class FormGeneratorSettings:
     @property
     def user_settings(self):
         if not hasattr(self, '_user_settings'):
-            self._user_settings = getattr(settings, 'FORM_GENERATOR', {})
+            self._user_settings = getattr(settings, 'DJANGO_FORM_GENERATOR', {})
         return self._user_settings
 
     def __getattr__(self, attr):
@@ -89,7 +89,7 @@ form_generator_settings = FormGeneratorSettings(DEFAULTS, IMPORT_STRINGS)
 
 def reload_form_generator_settings(*args, **kwargs):
     setting = kwargs['setting']
-    if setting == 'FORM_GENERATOR':
+    if setting == 'DJANGO_FORM_GENERATOR':
         form_generator_settings.reload()
 
 

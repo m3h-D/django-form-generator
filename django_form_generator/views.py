@@ -8,43 +8,50 @@ from django.conf import settings
 
 from django_htmx.http import HttpResponseClientRedirect
 
-from form_generator.common.utils import get_client_ip
-from form_generator.models import Form, FormResponse
-from form_generator.forms import FormGeneratorForm, FormGeneratorResponseForm
+from django_form_generator.common.utils import get_client_ip
+from django_form_generator.models import Form, FormResponse
+from django_form_generator.forms import FormGeneratorForm
 
 
 class FormGeneratorView(FormMixin, DetailView):
     queryset = Form.objects.filter_valid()
     model = Form
-    template_name = "form_generator/form.html"
+    template_name = "django_form_generator/form.html"
 
     def get_form_class(self):
         return import_string(settings.FORM_GENERATOR_FORM)
 
     def get_success_url(self) -> str:
-        return self.object.redirect_url or self.request.META.get("HTTP_REFERER") # type: ignore
+        return self.object.redirect_url or self.request.META.get("HTTP_REFERER")  # type: ignore
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         form = self.get_form()
         if form.is_valid():
-            messages.success(self.request, self.object.success_message or _("Form submited successfully."), 'success')
+            messages.success(
+                self.request,
+                self.object.success_message or _("Form submited successfully."),
+                "success",
+            )
             return self.form_valid(form)
         else:
-            messages.success(self.request, str(form.errors), 'danger')
+            messages.success(self.request, str(form.errors), "danger")
             return self.form_invalid(form)
 
     def get(self, request, *args, **kwargs):
         response = super().get(request, *args, **kwargs)
-        self.object.call_pre_apis({'request': request})
+        self.object.call_pre_apis({"request": request})
         return response
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs.update({"request": self.request,
-                        "form": self.object,
-                        "user_ip": get_client_ip(self.request), 
-                        })
+        kwargs.update(
+            {
+                "request": self.request,
+                "form": self.object,
+                "user_ip": get_client_ip(self.request),
+            }
+        )
         return kwargs
 
     def form_valid(self, form: FormGeneratorForm):
@@ -57,12 +64,17 @@ class FormGeneratorView(FormMixin, DetailView):
 class FormResponseView(FormMixin, DetailView):
     queryset = FormResponse.objects.all()
     model = FormResponse
-    template_name = "form_generator/form_response.html"
+    template_name = "django_form_generator/form_response.html"
 
     def get_form_class(self):
         return import_string(settings.FORM_GENERATOR_RESPONSE_FORM)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs.update({"form": self.object.form, "form_response": self.object,})
+        kwargs.update(
+            {
+                "form": self.object.form,
+                "form_response": self.object,
+            }
+        )
         return kwargs

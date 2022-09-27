@@ -23,5 +23,5 @@
   {% if not fields and not errors %}
     {% for field in hidden_fields %}{{ field }}{% endfor %}
   {% endif %}
-  <button class="btn btn-primary mb-5" id="form_submit_{{form.instance.id}}" type="submit" hx-post="{% url 'form_generator:form_detail' form.instance.id %}">{{form.instance.submit_text}}</button> 
+  <button class="btn btn-primary mb-5" id="form_submit_{{form.instance.id}}" type="submit" hx-post="{% url 'django_form_generator:form_detail' form.instance.id %}">{{form.instance.submit_text}}</button> 
 </div>
