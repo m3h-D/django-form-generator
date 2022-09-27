@@ -88,15 +88,15 @@ class Form(BaseModel):
     valid_from = models.DateTimeField(_("Valid From"), blank=True, null=True)
     valid_to = models.DateTimeField(_("Valid To"), blank=True, null=True)
     fields = models.ManyToManyField(
-        "form_generator.Field",
+        "django_form_generator.Field",
         verbose_name=_("Fields"),
-        through="form_generator.FormFieldThrough",
+        through="django_form_generator.FormFieldThrough",
         related_name="forms",
     )
     apis = models.ManyToManyField(
-        "form_generator.FormAPIManager",
+        "django_form_generator.FormAPIManager",
         verbose_name=_("Apis"),
-        through="form_generator.FormAPIThrough",
+        through="django_form_generator.FormAPIThrough",
         related_name="forms",
     )
 
@@ -232,13 +232,13 @@ class Form(BaseModel):
 
 class FormFieldThrough(models.Model):
     form = models.ForeignKey(
-        "form_generator.Form",
+        "django_form_generator.Form",
         verbose_name=_("Form"),
         on_delete=models.CASCADE,
         related_name="form_field_through",
     )
     field = models.ForeignKey(
-        "form_generator.Field",
+        "django_form_generator.Field",
         verbose_name=_("Field"),
         on_delete=models.CASCADE,
         related_name="form_field_through",
@@ -250,7 +250,7 @@ class FormFieldThrough(models.Model):
         default=const.FieldPosition.BREAK,
     )
     category = models.ForeignKey(
-        "form_generator.FieldCategory",
+        "django_form_generator.FieldCategory",
         verbose_name=_("Category"),
         on_delete=models.SET_NULL,
         blank=True,
@@ -291,8 +291,8 @@ class Field(BaseModel):
         _("Error Message"), max_length=200, blank=True, null=True
     )
     values = models.ManyToManyField(
-        "form_generator.Value",
-        through="form_generator.FieldValueThrough",
+        "django_form_generator.Value",
+        through="django_form_generator.FieldValueThrough",
         verbose_name=_("Values"),
         related_name="fields",
         help_text=_(
@@ -409,13 +409,13 @@ class Field(BaseModel):
 
 class FieldValueThrough(models.Model):
     field = models.ForeignKey(
-        "form_generator.Field",
+        "django_form_generator.Field",
         verbose_name=_("Field"),
         on_delete=models.CASCADE,
         related_name="field_values",
     )
     value = models.ForeignKey(
-        "form_generator.Value",
+        "django_form_generator.Value",
         verbose_name=_("Value"),
         on_delete=models.CASCADE,
         related_name="field_values",
@@ -447,13 +447,13 @@ class Value(BaseModel):
 
 class FormAPIThrough(models.Model):
     form = models.ForeignKey(
-        "form_generator.Form",
+        "django_form_generator.Form",
         verbose_name=_("Form"),
         on_delete=models.CASCADE,
         related_name="form_apis",
     )
     api = models.ForeignKey(
-        "form_generator.FormAPIManager",
+        "django_form_generator.FormAPIManager",
         verbose_name=_("API"),
         on_delete=models.CASCADE,
         related_name="form_apis",
@@ -499,7 +499,7 @@ class FormAPIManager(BaseModel):
 
 class FormResponse(BaseModel):
     form = models.ForeignKey(
-        "form_generator.Form",
+        "django_form_generator.Form",
         verbose_name=_("Form"),
         on_delete=models.PROTECT,
         related_name="responses",

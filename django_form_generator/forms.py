@@ -245,7 +245,7 @@ class FieldForm(forms.ModelForm):
 
 
 class FormAdminForm(forms.ModelForm):
-    theme = forms.ChoiceField(choices=fg_settings.FORM_THEME_CHOICES.choices)  # type: ignore
+    theme = forms.ChoiceField(choices=import_string(fg_settings.FORM_THEME_CHOICES) .choices)  # type: ignore
 
     class Meta:
         model = Form
