@@ -2,3 +2,5 @@ include LICENSE
 include README.rst
 recursive-include django_form_generator/static *
 recursive-include django_form_generator/templates *
+recursive-include django_form_generator/docs *
+recursive-include django_form_generator/common *

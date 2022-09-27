@@ -4,9 +4,9 @@ from django.utils.text import slugify
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from form_generator import const
-from form_generator.forms import FieldForm, FormAdminForm
-from form_generator.models import (
+from django_form_generator import const
+from django_form_generator.forms import FieldForm, FormAdminForm
+from django_form_generator.models import (
     FieldCategory,
     Form,
     Field,
