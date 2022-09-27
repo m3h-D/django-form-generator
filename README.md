@@ -52,7 +52,8 @@ there is an API-manager tool for you to call some APIs on loading form or after 
   urlpatterns = [
     path('admin/', admin.site.urls),
     ...
-    path('form-generator/', include('form_generator.urls')),
+    path('form-generator/', include(('form_generator.urls', 'form_generator'), namespace='form_generator')),
+    
     ...
   ]
   ```
