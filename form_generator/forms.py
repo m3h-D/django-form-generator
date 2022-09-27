@@ -6,11 +6,10 @@ from django.utils.module_loading import import_string
 from captcha.fields import ReCaptchaField
 from captcha.widgets import ReCaptchaV2Checkbox
 
-from form_generator.settings import form_generator_settings
+from form_generator.settings import form_generator_settings as fg_settings
 from form_generator.common.utils import FileSizeValidator
-from form_generator.models import Field
+from form_generator.models import Field, Form
 from form_generator import const
-
 
 class CustomeSelectFormField(forms.Select):
     option_inherits_attrs = True
@@ -122,7 +121,7 @@ class FormGeneratorForm(FormGeneratorBaseForm):
     def save(self):
         form_data = self.cleaned_data.copy()
         form_data.setdefault('request', self.request)
-        save_module = import_string(form_generator_settings.FORM_RESPONSE_SAVE) #type: ignore
+        save_module = import_string(fg_settings.FORM_RESPONSE_SAVE) #type: ignore
         save_module(self.instance, form_data, self.user_ip)
 
 
@@ -165,5 +164,13 @@ class FieldForm(forms.ModelForm):
     def save(self, commit=True):
         if self.cleaned_data['genre'] == const.FieldGenre.UPLOAD_FILE and \
             (not self.cleaned_data['file_size'] or self.cleaned_data['file_size'] <= 0):
-            self.instance.file_size = form_generator_settings.MAX_UPLOAD_FILE_SIZE
+            self.instance.file_size = fg_settings.MAX_UPLOAD_FILE_SIZE
         return super().save(commit)
+
+
+class FormAdminForm(forms.ModelForm):
+    theme = forms.ChoiceField(choices=fg_settings.FORM_THEME_CHOICES.choices) #type: ignore
+
+    class Meta:
+        model = Form
+        fields = '__all__'

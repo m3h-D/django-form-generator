@@ -44,3 +44,8 @@ class FieldPosition(TextChoices):
 class FormDirection(TextChoices):
     LTR = 'ltr', _('LTR')
     RTL = 'rtl', _('RTL')
+
+class FormTheme(TextChoices):
+    INLINE = 'form_generator/fields/inline_fields.html', _('In-line Theme')
+    INORDER = 'form_generator/fields/inorder_fields.html', _('In-order Theme')
+    DYNAMIC = 'form_generator/fields/dynamic_fields.html', _('Dynamic Theme')

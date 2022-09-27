@@ -22,7 +22,11 @@ there is an API-manager tool for you to call some APIs on loading form or after 
   ```python
   INSTALLED_APPS = [
     ...
-    "form_generator",
+    'django_htmx',
+    'crispy_forms',
+    'crispy_bootstrap5',
+    'captcha',
+    'form_generator',
     ...
   ]
   ```
@@ -229,11 +233,11 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
 
 - ### Form Theme:
   there are 3 themes(or actualy styel of rendering fields) for the forms:
-    1. inline-fields.html[^1].
+    1. In-line Theme[^1].
 
-    2. inorder-fields.html[^2].
+    2. In-order Theme[^2].
 
-    3. dynamic-fields.html[^3].
+    3. Dynamic Theme[^3].
    
     [^1]: In every line two fields will be rendered.
 
@@ -243,26 +247,49 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
   
 
   >Note: If you want to render two fields `inline` and one field `inorder` you should use `break` for the second field 
-  example:
-       - field1 inline
-       - field2 break
-       - field3 inorder 
+
+    - example:
+        - field1 inline
+        - field2 break
+        - field3 inorder 
+
+  
+  >Note: You can add your custom themes by create new TextChoices object and add it to `settings.py`
+  
+    - example:
+      1. *myapp/const.py*
+          ```python
+          from django.db.models import TextChoices
+
+          class CustomFormGeneratorTheme(TextChoices):
+            MY_THEME = "myapp/templates/my_theme.html", 'My Custom Theme'
+            ...
+
+          ```
+      2. *myproject/settings.py*
+          ```python
+            FORM_GENERATOR = {
+              "FORM_THEME_CHOICES": "myapp.const.CustomFormGeneratorTheme"
+            }
+          ```
+
+        
 
 - ### URLS:
   ```python
-      # to access the form you can call this url:
-      """GET: http://127.0.0.1:8000/form-generator/form/1/"""
-      #or 
-      reverse('form_generator:form_detail', kwargs={'pk': 1})
+  # to access the form you can call this url:
+  """GET: http://127.0.0.1:8000/form-generator/form/1/"""
+  #or 
+  reverse('form_generator:form_detail', kwargs={'pk': 1})
 
-      # to access the response of the form you can call this url
-      """GET: http://127.0.0.1:8000/form-generator/form-response/1/"""
-      #or
-      reverse('form_generator:form_response', kwargs={'pk': 1})
+  # to access the response of the form you can call this url
+  """GET: http://127.0.0.1:8000/form-generator/form-response/1/"""
+  #or
+  reverse('form_generator:form_response', kwargs={'pk': 1})
   ```
 
 - ### Settings:
-  **below is the default settings you can change them by adding it to your `settings.py`**
+  **below is the default settings for form_generator. you can change them by adding it to your `settings.py`**
   ```python
       FORM_GENERATOR = {
         'FORM_RESPONSE_SAVE': 'form_generator.models.save_form_response',
@@ -270,6 +297,7 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
         'MAX_UPLOAD_FILE_SIZE': 5242880, # default: 50 mb 
         'FORM_GENERATOR_FORM': 'form_generator.forms.FormGeneratorForm',
         'FORM_GENERATOR_RESPONSE_FORM': 'form_generator.forms.FormGeneratorResponseForm',
+        'FORM_THEME_CHOICES': 'form_generator.const.FormTheme',
       }
   ```
 

@@ -8,6 +8,7 @@ DEFAULTS = {
     'MAX_UPLOAD_FILE_SIZE': 5242880,
     'FORM_GENERATOR_FORM': 'form_generator.forms.FormGeneratorForm',
     'FORM_GENERATOR_RESPONSE_FORM': 'form_generator.forms.FormGeneratorResponseForm',
+    'FORM_THEME_CHOICES': 'form_generator.const.FormTheme',
 }
 
 
@@ -40,7 +41,7 @@ def import_from_string(val, setting_name):
     try:
         return import_string(val)
     except ImportError as e:
-        msg = "Could not import '%s' for API setting '%s'. %s: %s." % (val, setting_name, e.__class__.__name__, e)
+        msg = "Could not import '%s' for FORM_GENERATOR setting '%s'. %s: %s." % (val, setting_name, e.__class__.__name__, e)
         raise ImportError(msg)
 
 class FormGeneratorSettings:

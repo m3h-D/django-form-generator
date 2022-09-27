@@ -1,5 +1,4 @@
 import pathlib
-from unittest import result
 from django.db import models
 from django.core.validators import RegexValidator
 from django.utils.translation import gettext_lazy as _
@@ -54,8 +53,8 @@ class Form(BaseModel):
     redirect_url = models.URLField(
         _("Redirect URL"), max_length=200, blank=True, null=True)
     success_message = models.CharField(_("Success Message"), max_length=255, blank=True, null=True)
-    theme = models.FilePathField(_("Theme"), path=str(settings.BASE_DIR / 'form_generator/templates/form_generator/fields/'), 
-        recursive=True, max_length=250, help_text=_('If choose dynamic_fields.html the order of fields depends on position of Field.'))
+    theme = models.CharField(_("Theme"), max_length=300,
+        blank=True, null=True, help_text=_('If choose dynamic_fields.html the order of fields depends on position of Field.'))
     direction = models.CharField(_("Direction"), max_length=3, choices=const.FormDirection.choices, default=const.FormDirection.LTR)
     limit_to = models.PositiveIntegerField(_("Limit Submiting Form"), blank=True, null=True)
     valid_from = models.DateTimeField(_("Valid From"), blank=True, null=True)

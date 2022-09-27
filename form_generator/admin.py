@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from form_generator import const
-from form_generator.forms import FieldForm
+from form_generator.forms import FieldForm, FormAdminForm
 from form_generator.models import (FieldCategory, 
                         Form, 
                         Field, 
@@ -30,7 +30,7 @@ class FormAPIThroughInlineAdmin(admin.TabularInline):
 @admin.register(Form)
 class FormAdmin(admin.ModelAdmin):
     inlines = [FormFieldThroughInlineAdmin, FormAPIThroughInlineAdmin]
-
+    form = FormAdminForm
     actions = ('clone_action', )
 
     def clone_action(self, request, queryset):
