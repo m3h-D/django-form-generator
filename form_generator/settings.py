@@ -6,11 +6,8 @@ DEFAULTS = {
     'FORM_RESPONSE_SAVE': 'form_generator.models.save_form_response',
     'FORM_EVALUATIONS': {'form_data': '{{form_data}}'},
     'MAX_UPLOAD_FILE_SIZE': 5242880,
-    # 'CRISPY_ALLOWED_TEMPLATE_PACKS': 'bootstrap5',
-    # 'CRISPY_TEMPLATE_PACK': 'bootstrap5',
-    # 'RECAPTCHA_PUBLIC_KEY': 'test',
-    # 'RECAPTCHA_PRIVATE_KEY': 'test',
-    # 'SILENCED_SYSTEM_CHECKS': ['captcha.recaptcha_test_key_error']
+    'FORM_GENERATOR_FORM': 'form_generator.forms.FormGeneratorForm',
+    'FORM_GENERATOR_RESPONSE_FORM': 'form_generator.forms.FormGeneratorResponseForm',
 }
 
 
@@ -18,11 +15,8 @@ IMPORT_STRINGS = [
     'FORM_RESPONSE_SAVE',
     'FORM_EVALUATIONS',
     'MAX_UPLOAD_FILE_SIZE',
-    # 'RECAPTCHA_PUBLIC_KEY',
-    # 'RECAPTCHA_PRIVATE_KEY',
-    # 'CRISPY_ALLOWED_TEMPLATE_PACKS',
-    # 'CRISPY_TEMPLATE_PACK',
-    # 'SILENCED_SYSTEM_CHECKS',
+    'FORM_GENERATOR_FORM',
+    'FORM_GENERATOR_RESPONSE_FORM',
 ]
 
 def perform_import(val, setting_name):

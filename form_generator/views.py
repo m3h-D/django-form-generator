@@ -3,9 +3,10 @@ from django.views.generic.edit import FormMixin
 from django.contrib import messages
 from django.utils.translation import gettext as _
 from django.http import HttpResponseRedirect
+from django.utils.module_loading import import_string
+from django.conf import settings
 
 from django_htmx.http import HttpResponseClientRedirect
-# Create your views here.
 
 from form_generator.common.utils import get_client_ip
 from form_generator.models import Form, FormResponse
@@ -16,7 +17,9 @@ class FormGeneratorView(FormMixin, DetailView):
     queryset = Form.objects.filter_valid()
     model = Form
     template_name = "form_generator/form.html"
-    form_class = FormGeneratorForm
+
+    def get_form_class(self):
+        return import_string(settings.FORM_GENERATOR_FORM)
 
     def get_success_url(self) -> str:
         return self.object.redirect_url or self.request.META.get("HTTP_REFERER") # type: ignore
@@ -55,7 +58,9 @@ class FormResponseView(FormMixin, DetailView):
     queryset = FormResponse.objects.all()
     model = FormResponse
     template_name = "form_generator/form_response.html"
-    form_class = FormGeneratorResponseForm
+
+    def get_form_class(self):
+        return import_string(settings.FORM_GENERATOR_RESPONSE_FORM)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

@@ -19,8 +19,13 @@ class CustomeSelectFormField(forms.Select):
 class FormGeneratorBaseForm(forms.Form):
 
     def __init__(self, form, *args, **kwargs):
-        self.instance = form
         super().__init__(*args, **kwargs)
+        self.instance = form
+        self.template_name_p = getattr(self.instance, 'theme', self.template_name_p)
+        for field in self.instance.get_fields():
+            method = f'prepare_{field.genre}'
+            if hasattr(self, method):
+                self.fields[field.name] =  getattr(self, method)(field)
 
     def prepare_text_input(self, field: Field):
         widget_attrs: dict = field.build_widget_attrs(self.instance, {'content_type': 'field'})
@@ -109,19 +114,15 @@ class FormGeneratorBaseForm(forms.Form):
 class FormGeneratorForm(FormGeneratorBaseForm):
     
     def __init__(self, form, request, user_ip, *args, **kwargs):
-        super().__init__(form, *args, **kwargs)
         self.user_ip = user_ip
         self.request = request
-        self.template_name_p = getattr(self.instance, 'theme', self.template_name_p)
-        for field in self.instance.get_fields():
-            method = f'prepare_{field.genre}'
-            if hasattr(self, method):
-                self.fields[field.name] =  getattr(self, method)(field)
+        super().__init__(form, *args, **kwargs)
+
 
     def save(self):
         form_data = self.cleaned_data.copy()
         form_data.setdefault('request', self.request)
-        save_module = import_string(form_generator_settings.FORM_RESPONSE_SAVE)
+        save_module = import_string(form_generator_settings.FORM_RESPONSE_SAVE) #type: ignore
         save_module(self.instance, form_data, self.user_ip)
 
 

@@ -41,3 +41,11 @@ def render_post_api(context, form_id, api_id=None):
         else:
             responses = mark_safe('<br>'.join([result for _, result in responses]))
         return responses
+
+
+@register.filter(takes_context=True)
+def eval_data(context, body):
+    tmp = template.Template(body)
+    context = template.Context(context)
+    data = tmp.render(context)
+    return data
