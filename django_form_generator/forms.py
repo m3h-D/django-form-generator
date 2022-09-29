@@ -1,7 +1,6 @@
 from django import forms
 from django.core.validators import FileExtensionValidator
 from django.utils.translation import gettext as _
-from django.utils.module_loading import import_string
 
 from captcha.fields import ReCaptchaField
 from captcha.widgets import ReCaptchaV2Checkbox
@@ -190,36 +189,54 @@ class FormGeneratorForm(FormGeneratorBaseForm):
     def save(self):
         form_data = self.cleaned_data.copy()
         form_data.setdefault("request", self.request)
-        save_module = import_string(fg_settings.FORM_RESPONSE_SAVE)  # type: ignore
-        save_module(self.instance, form_data, self.user_ip)
+        save_module = fg_settings.FORM_RESPONSE_SAVE  
+        save_module(self.instance, form_data, self.user_ip)# type: ignore
 
 
 class FormGeneratorResponseForm(FormGeneratorBaseForm):
-    def __init__(self, form, form_response, *args, **kwargs):
+    def __init__(self, form, request, form_response, *args, **kwargs):
         super().__init__(form, *args, **kwargs)
         self.template_name_p = getattr(self.instance, "theme", self.template_name_p)
+        self.request = request
+        self.form_response = form_response
         form_response_data = form_response.get_data()
         for i, field in enumerate(self.instance.get_fields()):
             field_name = field.name
             method = f"prepare_{field.genre}"
             if hasattr(self, method):
                 self.fields[field_name] = getattr(self, method)(field)
-                self.fields[field_name].widget.attrs.update({"disabled": True})
+                if not form.is_editable:
+                    self.fields[field_name].widget.attrs.update({"disabled": True})
+                    if field.genre == const.FieldGenre.UPLOAD_FILE:
+                        self.fields[f'{field_name}'] = getattr(self, 'prepare_upload_url_file')(field)
                 try:
                     self.fields[field_name].initial = form_response_data[i].get(
                         "value", None
                     )
+
                 except IndexError:
                     pass
 
-    def prepare_upload_file(self, field: Field):
+    def prepare_upload_url_file(self, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
             self.instance, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {"widget": forms.URLInput(attrs=widget_attrs)}
         )
+        field_attrs.update({'required': False, 'disabled': True})
         return forms.URLField(**field_attrs)
+
+
+    def save(self):
+        save_module = fg_settings.FORM_RESPONSE_SAVE
+        form_data = self.form_response.pure_data
+        for changed_data in self.changed_data:
+            form_data[changed_data] = self.cleaned_data[changed_data]
+
+        form_data.setdefault("request", self.request)
+        save_module(self.instance, form_data, update_form_response_id=self.form_response.id)# type: ignore
+        
 
 
 class FieldForm(forms.ModelForm):
@@ -245,7 +262,7 @@ class FieldForm(forms.ModelForm):
 
 
 class FormAdminForm(forms.ModelForm):
-    theme = forms.ChoiceField(choices=import_string(fg_settings.FORM_THEME_CHOICES) .choices)  # type: ignore
+    theme = forms.ChoiceField(choices=fg_settings.FORM_THEME_CHOICES.choices)  # type: ignore
 
     class Meta:
         model = Form

@@ -3,21 +3,20 @@ from django.test.signals import setting_changed
 from django.utils.module_loading import import_string
 
 DEFAULTS = {
-    'FORM_RESPONSE_SAVE': 'form_generator.models.save_form_response',
+    'FORM_RESPONSE_SAVE': 'django_form_generator.models.save_form_response',
     'FORM_EVALUATIONS': {'form_data': '{{form_data}}'},
     'MAX_UPLOAD_FILE_SIZE': 5242880,
     'FORM_GENERATOR_FORM': 'django_form_generator.forms.FormGeneratorForm',
-    'FORM_GENERATOR_RESPONSE_FORM': 'django_form_generator.forms.FormGeneratorResponseForm',
+    'FORM_RESPONSE_FORM': 'django_form_generator.forms.FormGeneratorResponseForm',
     'FORM_THEME_CHOICES': 'django_form_generator.const.FormTheme',
 }
 
 
 IMPORT_STRINGS = [
     'FORM_RESPONSE_SAVE',
-    'FORM_EVALUATIONS',
-    'MAX_UPLOAD_FILE_SIZE',
     'FORM_GENERATOR_FORM',
-    'FORM_GENERATOR_RESPONSE_FORM',
+    'FORM_RESPONSE_FORM',
+    'FORM_THEME_CHOICES',
 ]
 
 def perform_import(val, setting_name):

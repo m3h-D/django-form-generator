@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.utils.text import slugify
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django.db.transaction import atomic
 
 from django_form_generator import const
 from django_form_generator.forms import FieldForm, FormAdminForm
@@ -35,33 +36,39 @@ class FormAPIThroughInlineAdmin(admin.TabularInline):
 
 @admin.register(Form)
 class FormAdmin(admin.ModelAdmin):
+    list_display = ['id', 'title', 'status', 'get_theme', 'created_at', 'updated_at']
+    list_display_links = ['id', 'title']
+    list_editable = ['status']
+    list_filter = ['status', 'created_at']
+    search_fields = ['title', 'slug']
+    readonly_fields = ['id', 'created_at', 'updated_at']
     inlines = [FormFieldThroughInlineAdmin, FormAPIThroughInlineAdmin]
     form = FormAdminForm
     actions = ("clone_action",)
 
+    @admin.display(description="Theme")
+    def get_theme(self, obj):
+        return const.FormTheme(obj.theme).label
+
+    @atomic
     def clone_action(self, request, queryset):
         for obj in queryset:
-            detail = obj.detail
-            apis = obj.apis.all()
-            fields = obj.fields.all()
+            f_through = obj.form_field_through.all().values('field_id', 'position', 'category_id', 'weight')
+            a_through = obj.form_apis.all().values('api_id', 'weight')
             for field in obj._meta.local_fields:
                 if field.unique:
                     if field.name in ("pk", "id"):
                         setattr(obj, field.name, None)
-                    setattr(obj, "slug", uuid.uuid4())
 
+            setattr(obj, "slug", uuid.uuid4())
+            setattr(obj, 'title', obj.title + ' (Copy)')
             setattr(obj, "status", const.FormStatus.DRAFT)
             obj.save()
 
-            for field in fields:
-                field = FormFieldThrough.objects.create(form=obj, field=field)
-            for api in apis:
-                api = FormAPIThrough.objects.create(form=obj, api=api)
-
-            setattr(detail, "pk", None)
-            setattr(detail, "form_id", obj.id)
-            detail.save()
-
+            ff_through = [FormFieldThrough(form_id=obj.id, **obj_) for obj_ in f_through]
+            FormFieldThrough.objects.bulk_create(ff_through, ignore_conflicts=True)
+            fa_through = [FormAPIThrough(form_id=obj.id, **obj_) for obj_ in a_through]
+            FormAPIThrough.objects.bulk_create(fa_through)
 
 class FieldValueThroughInlineAdmin(admin.TabularInline):
     model = FieldValueThrough
@@ -71,8 +78,13 @@ class FieldValueThroughInlineAdmin(admin.TabularInline):
 
 @admin.register(Field)
 class FieldAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'genre', 'is_active', 'created_at', 'updated_at']
+    list_display_links = ['id', 'name']
+    list_editable = ['is_active']
+    list_filter = ['is_active', 'created_at', 'genre']
+    search_fields = ['label', 'name', 'forms__title']
     inlines = [FieldValueThroughInlineAdmin]
-    readonly_fields = ["name"]
+    readonly_fields = ['id', 'name', 'created_at', 'updated_at']
     form = FieldForm
 
     def save_form(self, request, form, change):
@@ -84,6 +96,8 @@ class FieldAdmin(admin.ModelAdmin):
 class FormResponseAdmin(admin.ModelAdmin):
     list_display = ["id", "get_form_title", "user_ip", "show_response"]
     list_display_links = ["id", "get_form_title"]
+    search_fields = ['form__title', 'form__slug']
+    readonly_fields = ['id', 'unique_id', 'created_at', 'updated_at']
 
     @admin.display(description="Form Title")
     def get_form_title(self, obj):
@@ -92,10 +106,35 @@ class FormResponseAdmin(admin.ModelAdmin):
     @admin.display(description="Response")
     def show_response(self, obj):
         return mark_safe(
-            f"<a href='{reverse('form_generator:form_response', args=(obj.id, ))}'>Response</a>"
+            f"<a href='{reverse('django_form_generator:form_response', args=(obj.unique_id, ))}'>Response</a>"
         )
 
+@admin.register(FormAPIManager)
+class FormAPIManagerAdmin(admin.ModelAdmin):
+    list_display = ["id", "title", "method", "execute_time", "is_active", "created_at", "updated_at"]
+    list_display_links = ["id", "title"]
+    list_filter = ['is_active', 'created_at', 'execute_time', 'method']
+    list_editable = ['is_active']
+    search_fields = ['title', 'forms__title', 'forms__slug']
+    readonly_fields = ['id', 'created_at', 'updated_at']
 
-admin.site.register(Value)
-admin.site.register(FormAPIManager)
-admin.site.register(FieldCategory)
+
+@admin.register(FieldCategory)
+class FieldCategoryAdmin(admin.ModelAdmin):
+    list_display = ["id", "title", "parent", "weight", "is_active", "created_at", "updated_at"]
+    list_display_links = ["id", "title"]
+    list_filter = ['is_active', 'created_at', ('parent', admin.filters.EmptyFieldListFilter)]
+    list_editable = ['is_active']
+    search_fields = ['title']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+
+
+@admin.register(Value)
+class ValueAdmin(admin.ModelAdmin):
+    list_display = ["id", "name", "is_active", "created_at", "updated_at"]
+    list_display_links = ["id", "name"]
+    list_filter = ['is_active', 'created_at']
+    list_editable = ['is_active']
+    search_fields = ['name', 'fields__name', 'fields__label']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+

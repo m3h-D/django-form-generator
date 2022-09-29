@@ -15,7 +15,10 @@ integrity="sha384-OXTEbYDqaX2ZY/BOaZV/yFGChYHtrXH2nyXJ372n2Y8abBhrqacCEe+3qhSHtL
 <div dir="{{form.instance.direction}}" >
     <h4 class='my-5'>{%trans 'Title'%}: {{form.instance.title}}</h4>
     <div id="hx-django_form_generator" class="g-3" hx-target="this" hx-swap="outerHTML">
-        <form id="form-generator_{{form.instance.id}}" enctype="multipart/form-data">
+        <form id="form-generator_{{form.instance.id}}" enctype="multipart/form-data" {% if form.instance.is_editable %}method="post"{% endif %}>
+            {% if form.instance.is_editable %}
+            {% csrf_token %}
+            {% endif %}
             {{form.as_p}}
         </form>
         

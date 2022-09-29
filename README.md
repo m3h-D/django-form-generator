@@ -92,11 +92,7 @@ there is an API-manager tool for you to call some APIs on loading form or after 
 
   - #### Admin panel:
     *CK-Editor example*
-    <picture>
-
-      <img alt="Shows an example usage on cd-editor" src="django_form_generator/docs/images/ckEditor.png">
-
-    </picture>
+     ![Shows an example usage on ck-editor](https://raw.githubusercontent.com/m3h-D/Form-Generator/release/django_form_generator/docs/images/ckEditor.png)
 
 
   - ```./app_name/templates/index.html ```
@@ -127,11 +123,8 @@ there is an API-manager tool for you to call some APIs on loading form or after 
 
   - **example:**
     >Note: `first_name`, `last_name` and `job` are the name of the fields that are defined in a form which this api is assigned to.
-    <picture>
 
-      <img alt="create a body with the fields name of a form" src="django_form_generator/docs/images/apiManagerCreateUser.png">
-
-    </picture>
+    ![create a body with the fields name of a form](https://raw.githubusercontent.com/m3h-D/Form-Generator/release/django_form_generator/docs/images/apiManagerCreateUser.png)
 
 
 ---
@@ -151,11 +144,9 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
 
 - ### Creating API
     - **example:**
-    <picture>
-
-      <img alt="create a body with the fields name of a form" src="django_form_generator/docs/images/apiManagerGetUser.png">
-
-    </picture>
+  
+    
+    ![get response of an API](https://raw.githubusercontent.com/m3h-D/Form-Generator/release/django_form_generator/docs/images/apiManagerGetUser.png)
     
     >Note: To show the response use the template tag of `{% render_pre_api form_id api_id %}` inside your html file that the `form` is there.
 
@@ -228,6 +219,8 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
 
 
 - ### Form Theme:
+  to have multiple themes the html of `template_name_p` (attribute of django.forms.Form) will be replace by our html file. (`{{form.as_p}}`)
+
   there are 3 themes(or actualy styel of rendering fields) for the forms:
     1. In-line Theme[^1].
 
@@ -278,10 +271,10 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
   #or 
   reverse('django_form_generator:form_detail', kwargs={'pk': 1})
 
-  # to access the response of the form you can call this url
-  """GET: http://127.0.0.1:8000/form-generator/form-response/1/"""
+  # to access the response of the form you can call this url the kwarg_lookup is UUID field
+  """GET: http://127.0.0.1:8000/form-generator/form-response/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/"""
   #or
-  reverse('django_form_generator:form_response', kwargs={'pk': 1})
+  reverse('django_form_generator:form_response', kwargs={'unique_id': 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'})
   ```
 
 - ### Settings:
@@ -292,7 +285,7 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
         'FORM_EVALUATIONS': {'form_data': '{{form_data}}'},
         'MAX_UPLOAD_FILE_SIZE': 5242880, # default: 50 mb 
         'FORM_GENERATOR_FORM': 'django_form_generator.forms.FormGeneratorForm',
-        'FORM_GENERATOR_RESPONSE_FORM': 'django_form_generator.forms.FormGeneratorResponseForm',
+        'FORM_RESPONSE_FORM': 'django_form_generator.forms.FormGeneratorResponseForm',
         'FORM_THEME_CHOICES': 'django_form_generator.const.FormTheme',
       }
   ```

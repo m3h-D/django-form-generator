@@ -1,4 +1,5 @@
 import pathlib
+import uuid
 from django.db import models
 from django.core.validators import RegexValidator
 from django.utils.translation import gettext_lazy as _
@@ -99,6 +100,7 @@ class Form(BaseModel):
         through="django_form_generator.FormAPIThrough",
         related_name="forms",
     )
+    is_editable = models.BooleanField(_("Is Editable"), default=False)
 
     objects: FormManager = FormManager()
 
@@ -167,67 +169,6 @@ class Form(BaseModel):
             models.F("form_field_through__category__weight").asc(nulls_last=True),
             "form_field_through__weight",
         )
-
-    def save_response(self, data, user_ip):
-        api_response = []
-        pre_result = self.call_pre_apis(data)
-        post_result = self.call_post_apis(data)
-        pre = self._generate_api_result(pre_result)
-        post = self._generate_api_result(post_result)
-        if pre:
-            api_response.append(pre)
-        if post:
-            api_response.append(post)
-        response = FormResponse.objects.create(
-            data=self._generate_data(data),
-            user_ip=user_ip,
-            api_response=api_response or None,
-            form=self,
-        )
-        return response
-
-    def _generate_api_result(self, results):
-        data = []
-        for api, status_code, result in results:
-            data.append(
-                {
-                    "api": api.id,
-                    "url": api.url,
-                    "method": api.method,
-                    "body": api.body,
-                    "response_status_code": status_code,
-                    "result": result,
-                }
-            )
-        return data or None
-
-    def _generate_data(self, form_data):
-        data = []
-        request = form_data["request"]
-        for field in self.get_fields():
-            field_value = form_data[field.name]
-            if field.genre == const.FieldGenre.CAPTCHA:
-                continue
-            category_title = None
-            category = field.form_field_through.filter(form_id=self.pk).last().category
-            if category:
-                category_title = category.title
-            if field.genre == const.FieldGenre.UPLOAD_FILE and field_value is not None:
-                form_data[field.name] = field.upload_file(
-                    request._current_scheme_host, field_value
-                )
-
-            data.append(
-                {
-                    "id": field.id,
-                    "name": field.name,
-                    "label": field.label,
-                    "genre": field.genre,
-                    "category": category_title,
-                    "value": form_data[field.name],
-                }
-            )
-        return data or None
 
 
 class FormFieldThrough(models.Model):
@@ -402,8 +343,8 @@ class Field(BaseModel):
         directory = upload_file_handler(data)
         parts = pathlib.Path(directory).parts
         return {
-            "directory_path": directory,
-            "url_path": host + settings.MEDIA_URL + "/".join(parts[-2:]),
+            "directory": directory,
+            "url": host + settings.MEDIA_URL + "/".join(parts[-2:]),
         }
 
 
@@ -498,6 +439,7 @@ class FormAPIManager(BaseModel):
 
 
 class FormResponse(BaseModel):
+    unique_id = models.UUIDField(_("Unique ID"), unique=True)
     form = models.ForeignKey(
         "django_form_generator.Form",
         verbose_name=_("Form"),
@@ -506,7 +448,7 @@ class FormResponse(BaseModel):
     )
     data = models.JSONField(_("Data"))
     api_response = models.JSONField(_("Api Respons"), blank=True, null=True)
-    user_ip = models.GenericIPAddressField(_("IP Address"))
+    user_ip = models.GenericIPAddressField(_("IP Address"), blank=True, null=True)
 
     class Meta:
         verbose_name = _("Form Response")
@@ -518,6 +460,11 @@ class FormResponse(BaseModel):
     def __str__(self):
         return self.form.title
 
+    def save(self, *args, **kwargs):
+        if self.unique_id is None:
+            self.unique_id = uuid.uuid4()
+        return super().save(*args, **kwargs)
+
     @property
     def pure_data(self):
         result = {}
@@ -527,19 +474,89 @@ class FormResponse(BaseModel):
 
     def get_data(self):
         result = []
+        print(self.data)
         for data in self.data:
-            data_ = data
+            data_ = data.copy()
             if (
                 data["genre"] == const.FieldGenre.UPLOAD_FILE.value
                 and data["value"] is not None
             ):
-                data_["value"] = data["value"]["url_path"]
+                data_["value"] = data["value"]["url"]
                 result.append(data_)
             else:
                 result.append(data_)
         return result
 
+    @classmethod
+    def save_response(cls, form, data, user_ip=None, update_form_response_id=None):
+        if update_form_response_id is None:
+            api_response = []
+            pre_result = form.call_pre_apis(data)
+            post_result = form.call_post_apis(data)
+            pre = cls._generate_api_result(pre_result)
+            post = cls._generate_api_result(post_result)
+            if pre:
+                api_response.append(pre)
+            if post:
+                api_response.append(post)
+            response = FormResponse.objects.create(
+                data=cls._generate_data(form, data),
+                user_ip=user_ip,
+                api_response=api_response or None,
+                form=form,
+            )
+        else:
+            response = FormResponse.objects.get(id=update_form_response_id)
+            response.data = cls._generate_data(form, data)
+            response.save()
+        return response
 
-def save_form_response(form: Form, form_data: dict, user_ip: str):
+    @classmethod
+    def _generate_api_result(cls, results):
+        data = []
+        for api, status_code, result in results:
+            data.append(
+                {
+                    "api": api.id,
+                    "url": api.url,
+                    "method": api.method,
+                    "body": api.body,
+                    "response_status_code": status_code,
+                    "result": result,
+                }
+            )
+        return data or None
+
+    @classmethod
+    def _generate_data(cls, form, form_data):
+        data = []
+        request = form_data["request"]
+        for field in form.get_fields():
+            field_value = form_data[field.name]
+            if field.genre == const.FieldGenre.CAPTCHA:
+                continue
+            category_title = None
+            category = field.form_field_through.filter(form_id=form.pk).last().category
+            if category:
+                category_title = category.title
+            if field_value is not None and not isinstance(field_value, dict) and field.genre == const.FieldGenre.UPLOAD_FILE:
+                form_data[field.name] = field.upload_file(
+                    request._current_scheme_host, field_value
+                )
+
+            data.append(
+                {
+                    "id": field.id,
+                    "name": field.name,
+                    "label": field.label,
+                    "genre": field.genre,
+                    "category": category_title,
+                    "value": form_data[field.name],
+                }
+            )
+        return data or None
+
+
+def save_form_response(form: Form, form_data: dict, user_ip: str|None = None, update_form_response_id: int|None=None):
     # * You can access `request` from form_data
-    form.save_response(form_data, user_ip)
+    FormResponse.save_response(form, form_data, user_ip, update_form_response_id)
