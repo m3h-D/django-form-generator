@@ -48,7 +48,7 @@ there is an API-manager tool for you to call some APIs on loading form or after 
   urlpatterns = [
     path('admin/', admin.site.urls),
     ...
-    path('form-generator/', include('django_form_generator.urls')),
+    path('form-generator/', include(('django_form_generator.urls', 'django_form_generator'), namespace='django_form_generator')),
     ...
   ]
   ```

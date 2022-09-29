@@ -1,14 +1,16 @@
-import pathlib
 import uuid
 from django.db import models
 from django.core.validators import RegexValidator
 from django.utils.translation import gettext_lazy as _
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.cache import cache
-from django.conf import settings
 
 from django_form_generator.common.models import BaseModel
-from django_form_generator.common.utils import APICall, evaluate_data, upload_file_handler
+from django_form_generator.common.helpers import FileFieldHelper
+from django_form_generator.common.utils import (
+    APICall,
+    evaluate_data,
+)
 
 from django_form_generator import const
 from django_form_generator.managers import FormManager
@@ -339,14 +341,6 @@ class Field(BaseModel):
     def get_file_types(self):
         return self.file_types.replace(" ", ",").replace(", ", ",").split(",")
 
-    def upload_file(self, host, data):
-        directory = upload_file_handler(data)
-        parts = pathlib.Path(directory).parts
-        return {
-            "directory": directory,
-            "url": host + settings.MEDIA_URL + "/".join(parts[-2:]),
-        }
-
 
 class FieldValueThrough(models.Model):
     field = models.ForeignKey(
@@ -474,14 +468,15 @@ class FormResponse(BaseModel):
 
     def get_data(self):
         result = []
-        print(self.data)
         for data in self.data:
             data_ = data.copy()
             if (
                 data["genre"] == const.FieldGenre.UPLOAD_FILE.value
                 and data["value"] is not None
             ):
-                data_["value"] = data["value"]["url"]
+                data_["value"] = FileFieldHelper(
+                    data["value"]["url"], data["value"]["directory"]
+                )
                 result.append(data_)
             else:
                 result.append(data_)
@@ -507,7 +502,7 @@ class FormResponse(BaseModel):
             )
         else:
             response = FormResponse.objects.get(id=update_form_response_id)
-            response.data = cls._generate_data(form, data)
+            response.data = cls._generate_data(form, data, response)
             response.save()
         return response
 
@@ -528,7 +523,7 @@ class FormResponse(BaseModel):
         return data or None
 
     @classmethod
-    def _generate_data(cls, form, form_data):
+    def _generate_data(cls, form, form_data, instance=None):
         data = []
         request = form_data["request"]
         for field in form.get_fields():
@@ -539,9 +534,18 @@ class FormResponse(BaseModel):
             category = field.form_field_through.filter(form_id=form.pk).last().category
             if category:
                 category_title = category.title
-            if field_value is not None and not isinstance(field_value, dict) and field.genre == const.FieldGenre.UPLOAD_FILE:
-                form_data[field.name] = field.upload_file(
-                    request._current_scheme_host, field_value
+            if (
+                field_value is not None
+                and not isinstance(field_value, dict)
+                and field.genre == const.FieldGenre.UPLOAD_FILE
+            ):
+                try:
+                    if instance is not None:
+                        instance_directory = instance.pure_data[field.name]["directory"]
+                except:
+                    instance_directory = None
+                form_data[field.name] = FileFieldHelper.upload_file(
+                    request._current_scheme_host, field_value, instance_directory
                 )
 
             data.append(
@@ -557,6 +561,11 @@ class FormResponse(BaseModel):
         return data or None
 
 
-def save_form_response(form: Form, form_data: dict, user_ip: str|None = None, update_form_response_id: int|None=None):
+def save_form_response(
+    form: Form,
+    form_data: dict,
+    user_ip: str | None = None,
+    update_form_response_id: int | None = None,
+):
     # * You can access `request` from form_data
     FormResponse.save_response(form, form_data, user_ip, update_form_response_id)

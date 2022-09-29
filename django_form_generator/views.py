@@ -95,7 +95,3 @@ class FormResponseView(FormMixin, DetailView):
             }
         )
         return kwargs
-
-    def form_valid(self, form: FormGeneratorForm):
-        form.save()
-        return HttpResponseClientRedirect(self.get_success_url())

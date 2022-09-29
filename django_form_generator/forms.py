@@ -207,26 +207,12 @@ class FormGeneratorResponseForm(FormGeneratorBaseForm):
                 self.fields[field_name] = getattr(self, method)(field)
                 if not form.is_editable:
                     self.fields[field_name].widget.attrs.update({"disabled": True})
-                    if field.genre == const.FieldGenre.UPLOAD_FILE:
-                        self.fields[f'{field_name}'] = getattr(self, 'prepare_upload_url_file')(field)
                 try:
                     self.fields[field_name].initial = form_response_data[i].get(
                         "value", None
                     )
-
                 except IndexError:
                     pass
-
-    def prepare_upload_url_file(self, field: Field):
-        widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "field"}
-        )
-        field_attrs: dict = field.build_field_attrs(
-            {"widget": forms.URLInput(attrs=widget_attrs)}
-        )
-        field_attrs.update({'required': False, 'disabled': True})
-        return forms.URLField(**field_attrs)
-
 
     def save(self):
         save_module = fg_settings.FORM_RESPONSE_SAVE
