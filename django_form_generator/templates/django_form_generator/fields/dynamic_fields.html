@@ -11,21 +11,23 @@
       <hr>
       {% endif %}
       {% if field.field.widget.attrs.category %}
-        <h3 class='col-md-12'>{{field.field.widget.attrs.category}}</h3>
+        <h3 class='col-12'>{{field.field.widget.attrs.category}}</h3>
       {% endif %}
     {% endifchanged %}
-    {% if field.field.widget.attrs.position == 'inline' %}
+    {% if field.field.widget.attrs.position == 'inline' or field.field.widget.attrs.position == 'break' %}
         <div class="col">
     {% elif field.field.widget.attrs.position == 'inorder' %}
         <div class="col-12">
-    {% else %}
-        <div class="col">  
     {% endif %}
-          {{ field|as_crispy_field }}
-          {% if forloop.last %}
-            {% for field in hidden_fields %}{{ field }}{% endfor %}
-          {% endif %}
+        {{ field|as_crispy_field }}
+        {% if forloop.last %}
+          {% for field in hidden_fields %}{{ field }}{% endfor %}
+        {% endif %}
       </div>
+      {% if field.field.widget.attrs.position == 'break' %}
+      <div class="row"></div>
+      {% endif %}
+
     {% endfor %}
     </div>
   {% if not fields and not errors %}
