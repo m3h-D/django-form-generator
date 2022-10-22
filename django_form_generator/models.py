@@ -122,7 +122,7 @@ class Form(BaseModel):
         return self.title
 
     def get_absolute_url(self):
-        return reverse("form_detail", kwargs={"pk": self.pk})
+        return reverse("django_form_generator:form_detail", kwargs={"pk": self.pk})
 
     def __call_apis(
         self, execute_time: const.FormAPIManagerExecuteTime, response_data: dict
