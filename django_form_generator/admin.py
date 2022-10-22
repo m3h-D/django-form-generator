@@ -46,6 +46,20 @@ class FormAdmin(admin.ModelAdmin):
     form = FormAdminForm
     actions = ("clone_action",)
 
+    fieldsets = (
+        (None, {
+            'fields': ('title', 'slug', 'status', 'submit_text', 'redirect_url', 'success_message', 'id', 'created_at', 'updated_at')
+        }),
+        ('Style', {
+            'classes': ('wide',),
+            'fields': ('theme', 'direction'),
+        }),
+        ('Limitations', {
+            'classes': ('wide',),
+            'fields': ('limit_to', 'valid_from', 'valid_to', 'is_editable'),
+        }),
+    )
+
     @admin.display(description="Theme")
     def get_theme(self, obj):
         return const.FormTheme(obj.theme).label
@@ -86,6 +100,20 @@ class FieldAdmin(admin.ModelAdmin):
     inlines = [FieldValueThroughInlineAdmin]
     readonly_fields = ['id', 'name', 'created_at', 'updated_at']
     form = FieldForm
+
+    fieldsets = (
+        (None, {
+            'fields': ('label', 'genre', 'is_required', 'placeholder', 'default', 'help_text', 'is_active', 'regex_pattern', 'error_message', 'id', 'created_at', 'updated_at')
+        }),
+        ('File', {
+            'classes': ('wide',),
+            'fields': ('file_types', 'file_size'),
+        }),
+        ('Dpendency', {
+            'classes': ('wide',),
+            'fields': ('content_type', 'object_id'),
+        }),
+    )
 
     def save_form(self, request, form, change):
         form.instance.name = slugify(form.instance.label, True).replace("-", "_")

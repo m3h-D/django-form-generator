@@ -436,27 +436,21 @@ class FormAPIManager(BaseModel):
     def __str__(self) -> str:
         return self.title
 
-
-class FormResponse(BaseModel):
+class FormResponseBase(BaseModel):
     unique_id = models.UUIDField(_("Unique ID"), unique=True)
     form = models.ForeignKey(
         "django_form_generator.Form",
         verbose_name=_("Form"),
         on_delete=models.PROTECT,
-        related_name="responses",
+        related_name="%(class)s_responses",
     )
     data = models.JSONField(_("Data"))
     api_response = models.JSONField(_("Api Respons"), blank=True, null=True)
-    user_ip = models.GenericIPAddressField(_("IP Address"), blank=True, null=True)
 
     class Meta:
-        verbose_name = _("Form Response")
-        verbose_name_plural = _("Form Responses")
-        indexes = [
-            models.Index(fields=("user_ip",), name="f_g_%(class)s_user"),
-        ]
+        abstract = True
 
-    def __str__(self):
+    def _str_(self):
         return self.form.title
 
     def save(self, *args, **kwargs):
@@ -488,30 +482,6 @@ class FormResponse(BaseModel):
         return result
 
     @classmethod
-    def save_response(cls, form, data, user_ip=None, update_form_response_id=None):
-        if update_form_response_id is None:
-            api_response = []
-            pre_result = form.call_pre_apis(data)
-            post_result = form.call_post_apis(data)
-            pre = cls._generate_api_result(pre_result)
-            post = cls._generate_api_result(post_result)
-            if pre:
-                api_response.append(pre)
-            if post:
-                api_response.append(post)
-            response = FormResponse.objects.create(
-                data=cls._generate_data(form, data),
-                user_ip=user_ip,
-                api_response=api_response or None,
-                form=form,
-            )
-        else:
-            response = FormResponse.objects.get(id=update_form_response_id)
-            response.data = cls._generate_data(form, data, response)
-            response.save()
-        return response
-
-    @classmethod
     def _generate_api_result(cls, results):
         data = []
         for api, status_code, result in results:
@@ -532,7 +502,7 @@ class FormResponse(BaseModel):
         data = []
         request = form_data["request"]
         for field in form.get_fields():
-            field_value = form_data[field.name]
+            field_value = form_data.get(field.name, None)
             if field.genre == const.FieldGenre.CAPTCHA:
                 continue
             category_title = None
@@ -560,11 +530,45 @@ class FormResponse(BaseModel):
                     "label": field.label,
                     "genre": field.genre,
                     "category": category_title,
-                    "value": form_data[field.name],
+                    "value": form_data.get(field.name, None),
                 }
             )
         return data or None
 
+class FormResponse(FormResponseBase):
+    user_ip = models.GenericIPAddressField(_("IP Address"), blank=True, null=True)
+
+    class Meta:
+        verbose_name = _("Form Response")
+        verbose_name_plural = _("Form Responses")
+        indexes = [
+            models.Index(fields=("user_ip",), name="f_g_%(class)s_user"),
+            models.Index(fields=("unique_id",), name="f_g_%(class)s_unique_id"),
+        ]
+
+    @classmethod
+    def save_response(cls, form, data, user_ip=None, update_form_response_id=None):
+        if update_form_response_id is None:
+            api_response = []
+            pre_result = form.call_pre_apis(data)
+            post_result = form.call_post_apis(data)
+            pre = cls._generate_api_result(pre_result)
+            post = cls._generate_api_result(post_result)
+            if pre:
+                api_response.append(pre)
+            if post:
+                api_response.append(post)
+            response = FormResponse.objects.create(
+                data=cls._generate_data(form, data),
+                user_ip=user_ip,
+                api_response=api_response or None,
+                form=form,
+            )
+        else:
+            response = FormResponse.objects.get(id=update_form_response_id)
+            response.data = cls._generate_data(form, data, response)
+            response.save()
+        return response
 
 def save_form_response(
     form: Form,

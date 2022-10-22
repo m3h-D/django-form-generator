@@ -64,8 +64,8 @@ class FormGeneratorView(FormMixin, DetailView):
 
 
 class FormResponseView(FormMixin, DetailView):
-    queryset = FormResponse.objects.all()
-    model = FormResponse
+    queryset = fg_settings.FORM_GENERATOR_RESPONSE_MODEL.objects.all()
+    model = fg_settings.FORM_GENERATOR_RESPONSE_MODEL
     template_name = 'django_form_generator/form_response.html'
     slug_url_kwarg = 'unique_id'
     slug_field = 'unique_id'
@@ -90,6 +90,10 @@ class FormResponseView(FormMixin, DetailView):
         else:
             messages.success(self.request, str(form.errors), "danger")
             return self.form_invalid(form)
+
+    def form_valid(self, form):
+        form.save()
+        return super().form_valid(form)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
