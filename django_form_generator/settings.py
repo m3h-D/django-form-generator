@@ -9,6 +9,7 @@ DEFAULTS = {
     'FORM_GENERATOR_FORM': 'django_form_generator.forms.FormGeneratorForm',
     'FORM_RESPONSE_FORM': 'django_form_generator.forms.FormGeneratorResponseForm',
     'FORM_THEME_CHOICES': 'django_form_generator.const.FormTheme',
+    'FORM_MANAGER': 'django_form_generator.managers.FormManager'
 }
 
 
@@ -17,6 +18,7 @@ IMPORT_STRINGS = [
     'FORM_GENERATOR_FORM',
     'FORM_RESPONSE_FORM',
     'FORM_THEME_CHOICES',
+    'FORM_MANAGER',
 ]
 
 def perform_import(val, setting_name):

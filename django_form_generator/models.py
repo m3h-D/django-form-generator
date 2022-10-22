@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.core.validators import RegexValidator
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.cache import cache
@@ -13,7 +14,8 @@ from django_form_generator.common.utils import (
 )
 
 from django_form_generator import const
-from django_form_generator.managers import FormManager
+from django_form_generator.settings import form_generator_settings as fg_settings
+
 
 
 CONTENT_TYPE_MODELS_LIMIT = models.Q(
@@ -104,7 +106,7 @@ class Form(BaseModel):
     )
     is_editable = models.BooleanField(_("Is Editable"), default=False)
 
-    objects: FormManager = FormManager()
+    objects = fg_settings.FORM_MANAGER() #type: ignore
 
     class Meta:
         verbose_name = _("Form")
@@ -118,6 +120,9 @@ class Form(BaseModel):
 
     def __str__(self) -> str:
         return self.title
+
+    def get_absolute_url(self):
+        return reverse("form_detail", kwargs={"pk": self.pk})
 
     def __call_apis(
         self, execute_time: const.FormAPIManagerExecuteTime, response_data: dict

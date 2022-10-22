@@ -16,6 +16,12 @@ class FormGeneratorView(FormMixin, DetailView):
     model = Form
     template_name = "django_form_generator/form.html"
 
+    def get_queryset(self):
+        """Allow preview for superuser and staff members"""
+        if getattr(self.request.user, "is_staff", False) or getattr(self.request.user, "is_superuser", False):
+            return Form.objects.all()
+        return super().get_queryset()
+
     def get_form_class(self):
         return fg_settings.FORM_GENERATOR_FORM
 

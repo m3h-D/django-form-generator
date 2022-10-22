@@ -287,6 +287,7 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
         'FORM_GENERATOR_FORM': 'django_form_generator.forms.FormGeneratorForm',
         'FORM_RESPONSE_FORM': 'django_form_generator.forms.FormGeneratorResponseForm',
         'FORM_THEME_CHOICES': 'django_form_generator.const.FormTheme',
+        'FORM_MANAGER': 'django_form_generator.managers.FormManager',
       }
   ```
 
