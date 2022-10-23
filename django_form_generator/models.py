@@ -437,7 +437,7 @@ class FormAPIManager(BaseModel):
         return self.title
 
 class FormResponseBase(BaseModel):
-    unique_id = models.UUIDField(_("Unique ID"), unique=True)
+    unique_id = models.UUIDField(_("Unique ID"), unique=True, default=uuid.uuid4)
     form = models.ForeignKey(
         "django_form_generator.Form",
         verbose_name=_("Form"),
