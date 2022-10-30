@@ -171,8 +171,11 @@ class Form(BaseModel):
             data.append((api.pk, res))
         return data
 
-    def get_fields(self):
-        return self.fields.filter(is_active=True).order_by(
+    def get_fields(self, extra: dict|None=None):
+        conds = {"is_active": True}
+        if extra:
+            conds.update(extra)
+        return self.fields.filter(**conds).order_by(
             models.F("form_field_through__category__weight").asc(nulls_last=True),
             "form_field_through__weight",
         )
