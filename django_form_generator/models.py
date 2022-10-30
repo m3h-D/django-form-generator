@@ -314,17 +314,21 @@ class Field(BaseModel):
         return attrs
 
     def build_widget_attrs(self, form, extra_attrs: dict | None = None):
-        attrs = {"instance_id": self.pk, "onchange": "onElementChange(this)"}
         form_field_through = self.form_field_through.filter(form_id=form.id).last()  # type: ignore
+        attrs = {"instance_id": self.pk,
+                "position": form_field_through.position}
 
-        if self.content_object is not None:
-            attrs.update({"disabled": True})
+        if self.genre in const.FieldGenre.selectable_fields():
+            attrs.update({"onchange": "onElementChange(this)"})
+        else:
+            attrs.update({"onkeypress": "onElementChange(this)"})
 
         if self.content_object is not None:
             attrs.update(
                 {
                     "parent_object_id": self.object_id,
                     "parent_content_type": self.content_type.model,
+                    "disabled": True
                 }
             )
 
@@ -333,8 +337,6 @@ class Field(BaseModel):
 
         if self.placeholder is not None:
             attrs.update({"placeholder": self.placeholder})
-
-        attrs.update({"position": form_field_through.position})
 
         if extra_attrs:
             attrs.update(extra_attrs)

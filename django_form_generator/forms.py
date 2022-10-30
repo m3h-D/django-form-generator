@@ -7,7 +7,7 @@ from captcha.widgets import ReCaptchaV2Checkbox
 
 from django_form_generator.settings import form_generator_settings as fg_settings
 from django_form_generator.common.utils import FileSizeValidator
-from django_form_generator.models import Field, Form
+from django_form_generator.models import Field, Form, Value
 from django_form_generator import const
 
 
@@ -20,10 +20,30 @@ class FormGeneratorBaseForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.instance = form
         self.template_name_p = getattr(self.instance, "theme", self.template_name_p)
+        self._initial_fields()
+        
+    def _initial_fields(self):
         for field in self.instance.get_fields():
             method = f"prepare_{field.genre}"
             if hasattr(self, method):
                 self.fields[field.name] = getattr(self, method)(field)
+                self._handel_required_fields(field, self.fields[field.name])
+
+    def _handel_required_fields(self, field, form_field):
+        if self.data and field.content_object:
+            if isinstance(field.content_object, Value):
+                field_name = self.instance.get_fields(extra={"id__in":field.content_object.fields.values_list('id', flat=True)}).last().name
+                parent_data = self.data.get(field_name, '')
+                if str(field.object_id) not in parent_data:
+                    form_field.required = False
+                else:
+                    form_field.widget.attrs.update({'disabled': False})
+            else:
+                parent_data = self.data.get(field.content_object.name, '')
+                if len(parent_data) <= 0:
+                    form_field.required = False
+                else:
+                    form_field.widget.attrs.update({'disabled': False})
 
     def prepare_text_input(self, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
@@ -195,24 +215,30 @@ class FormGeneratorForm(FormGeneratorBaseForm):
 
 class FormGeneratorResponseForm(FormGeneratorBaseForm):
     def __init__(self, form, request, form_response, *args, **kwargs):
-        super().__init__(form, *args, **kwargs)
-        self.template_name_p = getattr(self.instance, "theme", self.template_name_p)
         self.request = request
         self.form_response = form_response
-        form_response_data = form_response.get_data()
+        super().__init__(form, *args, **kwargs)
+
+    def _initial_fields(self):
+        form_response_data = self.form_response.get_data()
         for i, field in enumerate(self.instance.get_fields()):
             field_name = field.name
             method = f"prepare_{field.genre}"
             if hasattr(self, method):
                 self.fields[field_name] = getattr(self, method)(field)
-                if not form.is_editable:
+                if not self.instance.is_editable:
                     self.fields[field_name].widget.attrs.update({"disabled": True})
                 try:
-                    self.fields[field_name].initial = form_response_data[i].get(
+                    initial_value = form_response_data[i].get(
                         "value", None
                     )
+                    self.fields[field_name].initial = initial_value
+                    if initial_value is not None:
+                        self.fields[field_name].widget.attrs.update({"disabled": False})
                 except IndexError:
                     pass
+                
+                self._handel_required_fields(field, self.fields[field.name])
 
     def save(self):
         save_module = fg_settings.FORM_RESPONSE_SAVE

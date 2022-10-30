@@ -26,21 +26,37 @@ integrity="sha384-OXTEbYDqaX2ZY/BOaZV/yFGChYHtrXH2nyXJ372n2Y8abBhrqacCEe+3qhSHtL
         if (current.attr('type') == "radio"){
             objId = current.attr('value')
         }
-        else if(current[0].type == 'select-one'){
+        else if(current[0].type == 'select-one'  || current.attr('type') == 'checkbox'){
             objId = current.val()
         }
         else{
             objId = current.attr('instance_id')
         }
         $(`*[parent_object_id=${objId}][parent_content_type=${current.attr('content_type')}]`).each(function(index, element) {
-            console.log($(`*[parent_object_id=${objId}][parent_content_type=${current.attr('content_type')}]`)[index])
-            element.removeAttribute('disabled');
             element.setAttribute('parent_answer', current.attr('instance_id'))
+            if(current[0].type == 'select-one' || current.attr('type') == 'checkbox'){
+                element.setAttribute('parent_value_answer', current.val())
+                if($(`*[value=${element.getAttribute('parent_value_answer')}][content_type=value]`).is(':checked')){
+                    element.removeAttribute('disabled');
+                }else{
+                    element.setAttribute('disabled', true);
+                }
+            }else{
+                element.removeAttribute('disabled');
+            }
         });
         
-        $(`*:not([parent_object_id=${objId}])[parent_content_type=${current.attr('content_type')}][parent_answer=${current.attr('instance_id')}]`).each(function(index, element) {
-            element.setAttribute('disabled', true);
-        });
+            if ((current.attr('type') == 'checkbox')){
+                $(`*:not([parent_value_answer=${current.val()}])[parent_content_type=${current.attr('content_type')}][parent_answer=${current.attr('instance_id')}]`).each(function(index, element) {
+                    if (element.getAttribute('disabled') == false)
+                        element.setAttribute('disabled', true);
+                });
+            }else {
+
+                $(`*:not([parent_object_id=${objId}])[parent_content_type=${current.attr('content_type')}][parent_answer=${current.attr('instance_id')}]`).each(function(index, element) {
+                    element.setAttribute('disabled', true);
+                });
+            };
     };
 </script>
 {% endblock %}

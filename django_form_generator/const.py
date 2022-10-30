@@ -24,6 +24,10 @@ class FieldGenre(TextChoices):
     CAPTCHA = 'captcha', _('Captcha')
     UPLOAD_FILE = 'upload_file', _('Upload file')
 
+    @classmethod
+    def selectable_fields(cls):
+        return [cls.DROPDOWN, cls.CHECKBOX, cls.RADIO, cls.MULTI_CHECKBOX]
+
 class FormAPIManagerMethod(TextChoices):
     GET = 'get', _('GET')
     POST = 'post', _('POST')
