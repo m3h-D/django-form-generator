@@ -1,6 +1,7 @@
 import requests
 import uuid
 import os
+from pathlib import Path
 from django.conf import settings
 from django.template import Template, Context
 from django.utils.safestring import mark_safe
@@ -11,11 +12,17 @@ from django_form_generator.const import FormAPIManagerMethod
 from django_form_generator.settings import form_generator_settings as fg_settings
 
 
+FILE_UPLOAD_DIRECTORY = os.path.join(settings.MEDIA_ROOT, 'django_form_generator')
+
+try:
+    Path(FILE_UPLOAD_DIRECTORY).mkdir(exist_ok=True)
+except Exception as e:
+    print(e)
+
 def upload_file_handler(f):
     new_filename = uuid.uuid4()
     _, ext = os.path.splitext(f.name)
-    directory = f'django_form_generator/{new_filename}{ext}'
-    dest = os.path.join(settings.MEDIA_ROOT, directory)
+    dest = FILE_UPLOAD_DIRECTORY + f'/{new_filename}{ext}'
     with open(dest, 'wb+') as destination:
         for chunk in f.chunks():
             destination.write(chunk)
