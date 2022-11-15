@@ -1,0 +1,106 @@
+{% load i18n static %}
+{% load crispy_forms_tags %}
+<link rel="stylesheet" href="/static/admin/css/forms.css">
+<div class="fields-filter d-flex flex-row">
+<form action="" method="get">
+    {{ spec.form.non_field_errors }}
+
+    {% for hidden_field in spec.form.hidden_fields %}
+    {{ hidden_field.errors }}
+    {{ hidden_field }}
+    {% endfor %}
+    <div class="search-field-section d-flex flex-row mx-2">
+        <div class="d-flex flex-column">
+            <fieldset class="module aligned">
+                <div class="form-row field-form">
+                    <div>   
+                        <input type="text" name="form_id" id="form_id" class="vForeignKeyRawIdAdminField" placeholder="Select a form">
+                        <a href="{% url 'admin:django_form_generator_form_changelist' %}?_to_field=id" class="related-lookup" id="lookup_form_id" title="Lookup"></a>
+                    </div>
+                </div>
+            </fieldset>
+            <fieldset class="form_fields module aligned">
+                <div class="form-row field-operand field-field field-text">
+                    {% for field in spec.form.visible_fields %}
+                    <div class="fieldBox field-{{field.name}}{% if field.errors %} error{% endif %}">
+                        {{field.label}}: 
+                        {{ field }}
+                        <div class="help" id="id_field" style="margin-left: 0%;">
+                            {{ field.help_text }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <input type="button" class=" btn btn-danger remove-row" value="Remove" onclick="rowRemover(event)">
+                </div>
+            </fieldset>
+            <div id="added-form-group" class="added-form-group search-form"></div>
+        </div>
+        <div class="add-row submit-row">
+            <input id="rowAdder" type="button" class="addlink" value="Add">
+            <input id="rowAdder" type="submit" class="addlink" value="submit">
+        </div>
+        <a class="button" href="?{{ spec.other_query_string }}">{% trans 'Clear' %}</a>
+    </div>
+</form>
+</div>
+
+<script type="text/javascript">
+    document.getElementById('rowAdder').addEventListener('click', rowAdder);
+    document.onload =  createFields();
+    document.querySelectorAll('.fieldBox.field-operand')[0].setAttribute('hidden', true)
+    // document.querySelectorAll('.remove-row')[0].setAttribute('hidden', true)
+    
+    function rowRemover(event){
+        event.target.parentNode.parentNode.remove();
+    }
+
+    function rowAdder(item){
+        var aa = document.querySelector('.form_fields').cloneNode(true)
+        Object.entries(item).forEach(([key, value]) => {
+            if (key == 'data-operand'){
+                aa.children[0].children[0].children[0].value = value;
+            }
+            else if (key == 'data-field')
+                aa.children[0].children[1].children[0].value = value;
+            else if (key == 'data-text')
+                aa.children[0].children[2].children[0].value = value;
+            else
+            {
+                // aa.children[0].children[0].children[0].value = null;
+                aa.children[0].children[1].children[0].value = null;
+                aa.children[0].children[2].children[0].value = null;
+            };
+            aa.children[0].children[0].removeAttribute('hidden');
+            document.querySelector('.added-form-group').append(aa);
+        });
+    };
+
+    function createFields(){
+        const params = new URLSearchParams(window.location.search);
+        var formId = params.get('form_id')
+        if (formId)
+            document.getElementById('form_id').setAttribute('value', formId)
+        var ds = new Array();
+        var x = new Object();
+        params.forEach(function (item, key){
+            if (key == 'data-operand'){
+                x[key] = item
+            }
+            else if ((key == 'data-field')){
+                x[key] =  item;
+            }else if (key == 'data-text'){
+                x[key] = item
+                ds.push(x)
+                x = new Object();
+            }
+        });
+        for (let i = 0; i < ds.length; i++) {
+            rowAdder(ds[i]);
+        };
+        var elements = document.querySelectorAll('.form_fields');
+
+        while(elements.length > 1){
+            elements[0].parentNode.removeChild(elements[0]);
+        };
+    };
+</script>

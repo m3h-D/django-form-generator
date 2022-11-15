@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from django.db import models
 from django.core.validators import RegexValidator
 from django.urls import reverse
@@ -15,7 +16,6 @@ from django_form_generator.common.utils import (
 
 from django_form_generator import const
 from django_form_generator.settings import form_generator_settings as fg_settings
-
 
 
 CONTENT_TYPE_MODELS_LIMIT = models.Q(
@@ -106,7 +106,7 @@ class Form(BaseModel):
     )
     is_editable = models.BooleanField(_("Is Editable"), default=False)
 
-    objects = fg_settings.FORM_MANAGER() #type: ignore
+    objects = fg_settings.FORM_MANAGER()  # type: ignore
 
     class Meta:
         verbose_name = _("Form")
@@ -171,12 +171,13 @@ class Form(BaseModel):
             data.append((api.pk, res))
         return data
 
-    def get_fields(self, extra: dict|None=None):
+    def get_fields(self, extra: dict | None = None):
         conds = {"is_active": True}
         if extra:
             conds.update(extra)
         return self.fields.filter(**conds).order_by(
-            models.F("form_field_through__category__weight").asc(nulls_last=True),
+            models.F("form_field_through__category__weight").asc(
+                nulls_last=True),
             "form_field_through__weight",
         )
 
@@ -234,7 +235,8 @@ class Field(BaseModel):
     default = models.CharField(
         _("Default Value"), max_length=255, blank=True, null=True
     )
-    help_text = models.CharField(_("Help Text"), max_length=200, blank=True, null=True)
+    help_text = models.CharField(
+        _("Help Text"), max_length=200, blank=True, null=True)
     regex_pattern = models.CharField(
         _("Regex Pattern"), max_length=500, blank=True, null=True
     )
@@ -275,7 +277,8 @@ class Field(BaseModel):
         blank=True,
         null=True,
     )
-    object_id = models.BigIntegerField(_("Depends on Object ID"), blank=True, null=True)
+    object_id = models.BigIntegerField(
+        _("Depends on Object ID"), blank=True, null=True)
     content_object = GenericForeignKey()
 
     class Meta:
@@ -304,7 +307,8 @@ class Field(BaseModel):
             attrs.update(
                 {
                     "validators": [
-                        RegexValidator(self.regex_pattern, self.error_message or None)
+                        RegexValidator(self.regex_pattern,
+                                       self.error_message or None)
                     ]
                 }
             )
@@ -319,7 +323,7 @@ class Field(BaseModel):
     def build_widget_attrs(self, form, extra_attrs: dict | None = None):
         form_field_through = self.form_field_through.filter(form_id=form.id).last()  # type: ignore
         attrs = {"instance_id": self.pk,
-                "position": form_field_through.position}
+                 "position": form_field_through.position}
 
         if self.genre in const.FieldGenre.selectable_fields():
             attrs.update({"onchange": "onElementChange(this)"})
@@ -369,7 +373,8 @@ class FieldValueThrough(models.Model):
 
     class Meta:
         ordering = ("weight",)
-        indexes = [models.Index(fields=("weight",), name="f_g_%(class)s_weight")]
+        indexes = [models.Index(
+            fields=("weight",), name="f_g_%(class)s_weight")]
 
     def __str__(self) -> str:
         return f"{self.field.name} | {self.value.name}"
@@ -407,7 +412,8 @@ class FormAPIThrough(models.Model):
 
     class Meta:
         ordering = ("weight",)
-        indexes = [models.Index(fields=("weight",), name="f_g_%(class)s_weight")]
+        indexes = [models.Index(
+            fields=("weight",), name="f_g_%(class)s_weight")]
 
     def __str__(self) -> str:
         return f"{self.form.title} | {self.api.title}"
@@ -441,8 +447,10 @@ class FormAPIManager(BaseModel):
     def __str__(self) -> str:
         return self.title
 
+
 class FormResponseBase(BaseModel):
-    unique_id = models.UUIDField(_("Unique ID"), unique=True, default=uuid.uuid4)
+    unique_id = models.UUIDField(
+        _("Unique ID"), unique=True, default=uuid.uuid4)
     form = models.ForeignKey(
         "django_form_generator.Form",
         verbose_name=_("Form"),
@@ -482,6 +490,9 @@ class FormResponseBase(BaseModel):
                     data["value"]["url"], data["value"]["directory"]
                 )
                 result.append(data_)
+            elif data_["value"] and data["genre"] in (const.FieldGenre.DATETIME, const.FieldGenre.DATE):
+                data_["value"] = datetime.fromisoformat(data_["value"])
+                result.append(data_)
             else:
                 result.append(data_)
         return result
@@ -508,10 +519,15 @@ class FormResponseBase(BaseModel):
         request = form_data["request"]
         for field in form.get_fields():
             field_value = form_data.get(field.name, None)
+            if field.genre in (const.FieldGenre.DATE,
+                               const.FieldGenre.TIME,
+                               const.FieldGenre.DATETIME):
+                field_value = str(field_value)
             if field.genre == const.FieldGenre.CAPTCHA:
                 continue
             category_title = None
-            category = field.form_field_through.filter(form_id=form.pk).last().category
+            category = field.form_field_through.filter(
+                form_id=form.pk).last().category
             if category:
                 category_title = category.title
             if (
@@ -527,28 +543,41 @@ class FormResponseBase(BaseModel):
                 form_data[field.name] = FileFieldHelper.upload_file(
                     request._current_scheme_host, field_value, instance_directory
                 )
+            if field_value and  isinstance(field_value, str):
+                field_value = int(field_value) if field_value.isdigit() else field_value
+            elif isinstance(field_value, list):
+                field_value = [int(val) if val.isdigit() else val for val in field_value]
 
+            new_data = {
+                "id": field.id,
+                "name": field.name,
+                "label": field.label,
+                "genre": field.genre,
+                "category": category_title,
+                "value": field_value,
+                "depends_on": None
+            }
+            if field.content_object:
+                new_data["depends_on"] = {"id": field.object_id, 
+                                            "type": field.content_type.model,
+                                            "value": next((form_data.get(i.name, None) for i in form.get_fields() if i.name == field.content_object.name), None)}
             data.append(
-                {
-                    "id": field.id,
-                    "name": field.name,
-                    "label": field.label,
-                    "genre": field.genre,
-                    "category": category_title,
-                    "value": form_data.get(field.name, None),
-                }
+                new_data
             )
         return data or None
 
+
 class FormResponse(FormResponseBase):
-    user_ip = models.GenericIPAddressField(_("IP Address"), blank=True, null=True)
+    user_ip = models.GenericIPAddressField(
+        _("IP Address"), blank=True, null=True)
 
     class Meta:
         verbose_name = _("Form Response")
         verbose_name_plural = _("Form Responses")
         indexes = [
             models.Index(fields=("user_ip",), name="f_g_%(class)s_user"),
-            models.Index(fields=("unique_id",), name="f_g_%(class)s_unique_id"),
+            models.Index(fields=("unique_id",),
+                         name="f_g_%(class)s_unique_id"),
         ]
 
     @classmethod
@@ -575,6 +604,7 @@ class FormResponse(FormResponseBase):
             response.save()
         return response
 
+
 def save_form_response(
     form: Form,
     form_data: dict,
@@ -582,4 +612,5 @@ def save_form_response(
     update_form_response_id: int | None = None,
 ):
     # * You can access `request` from form_data
-    FormResponse.save_response(form, form_data, user_ip, update_form_response_id)
+    FormResponse.save_response(
+        form, form_data, user_ip, update_form_response_id)

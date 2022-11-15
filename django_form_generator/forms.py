@@ -4,6 +4,7 @@ from django.utils.translation import gettext as _
 
 from captcha.fields import ReCaptchaField
 from captcha.widgets import ReCaptchaV2Checkbox
+from tempus_dominus.widgets import DatePicker, TimePicker, DateTimePicker
 
 from django_form_generator.settings import form_generator_settings as fg_settings
 from django_form_generator.common.utils import FileSizeValidator
@@ -72,12 +73,12 @@ class FormGeneratorBaseForm(forms.Form):
         )
         return forms.IntegerField(**field_attrs)
 
-    def prepare_data(self, field: Field):
+    def prepare_date(self, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
             self.instance, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
-            {"widget": forms.DateInput(attrs=widget_attrs)}
+            {"widget": DatePicker(attrs=widget_attrs)}
         )
         return forms.DateField(**field_attrs)
 
@@ -86,7 +87,7 @@ class FormGeneratorBaseForm(forms.Form):
             self.instance, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
-            {"widget": forms.TimeInput(attrs=widget_attrs)}
+            {"widget": TimePicker(attrs=widget_attrs)}
         )
         return forms.TimeField(**field_attrs)
 
@@ -95,7 +96,7 @@ class FormGeneratorBaseForm(forms.Form):
             self.instance, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
-            {"widget": forms.DateTimeInput(attrs=widget_attrs)}
+            {"widget": DateTimePicker(attrs=widget_attrs)}
         )
         return forms.DateTimeField(**field_attrs)
 
@@ -233,8 +234,11 @@ class FormGeneratorResponseForm(FormGeneratorBaseForm):
                         "value", None
                     )
                     self.fields[field_name].initial = initial_value
-                    if initial_value is not None:
-                        self.fields[field_name].widget.attrs.update({"disabled": False})
+                    if initial_value:
+                        try:
+                            del self.fields[field_name].widget.attrs["disabled"]
+                        except KeyError:
+                            pass
                 except IndexError:
                     pass
                 
@@ -279,3 +283,10 @@ class FormAdminForm(forms.ModelForm):
     class Meta:
         model = Form
         fields = "__all__"
+
+
+
+class FormResponseFilterForm(forms.Form):
+    operand = forms.ChoiceField(choices=(('OR', 'OR'), ('AND', 'AND')),  required=False)
+    field = forms.ModelChoiceField(Field.objects.all(), required=False)
+    text = forms.CharField(max_length=120, required=False, help_text=_("if want to search on DropDown field or Radio or ... enter ID of it from Value table"))

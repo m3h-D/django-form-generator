@@ -1,4 +1,5 @@
 import uuid
+from django.db import models
 from django.contrib import admin
 from django.utils.text import slugify
 from django.urls import reverse
@@ -6,7 +7,8 @@ from django.utils.safestring import mark_safe
 from django.db.transaction import atomic
 
 from django_form_generator import const
-from django_form_generator.forms import FieldForm, FormAdminForm
+from django_form_generator.common.admins import FormFilter
+from django_form_generator.forms import FieldForm, FormAdminForm, FormResponseFilterForm
 from django_form_generator.models import (
     FieldCategory,
     Form,
@@ -20,6 +22,81 @@ from django_form_generator.models import (
 )
 
 # Register your models here.
+
+
+
+
+class FormResponseFilter(FormFilter):
+
+    template = "django_form_generator/filters/form_response_filter.html"
+    form_class = FormResponseFilterForm
+
+    def _create_related_fields_lookup(self, q, fields, fields_text, current_index, current_field_id, related_field_id, index=None):
+        related =  Field.objects.filter(object_id=related_field_id, content_type__model='field').last()
+        if related and str(related.pk) in fields:
+            depended_field = Field.objects.filter(object_id=current_field_id, content_type__model='field').last()
+            if depended_field:
+                try:
+                    depended_field_index = current_index + 1
+                    fields_text[depended_field_index]
+                except IndexError:
+                    depended_field_index = current_index 
+                dp_value = int(fields_text[depended_field_index]) if fields_text[depended_field_index].isdigit() else fields_text[depended_field_index]
+                if index:
+                    if isinstance(dp_value, int):
+                        q.add(models.Q(**{f"{self.field_path}__{index}__value": dp_value}), models.Q.AND)
+                    else:
+                        q.add(models.Q(**{f"{self.field_path}__{index}__value__regex": dp_value}), models.Q.AND)
+                else:
+                    q.add(models.Q(**{f"{self.field_path}__contains": [{"id": depended_field.pk, "value": dp_value}]}), models.Q.AND)
+        return q
+
+    def get_lookups(self):
+        lookup = models.Q()
+
+        fields_text = self.request.GET.getlist(f'{self.field.name}-text')
+        fields_id = self.request.GET.getlist(f'{self.field.name}-field')
+        fields_operand = self.request.GET.getlist(f'{self.field.name}-operand')
+        form_id = int(self.request.GET.get('form_id', '0'))
+        if form_id:
+            form = Form.objects.prefetch_related('fields').get(id=form_id)
+            form_fields_list = list(form.get_fields().values_list('id', flat=True))
+
+            for i in range(len(fields_text)):
+                field_id = int(fields_id[i])
+                field_value = int(fields_text[i]) if fields_text[i].isdigit() else fields_text[i]
+                current_operand = getattr(models.Q, fields_operand[i], models.Q.AND)
+                if isinstance(field_value, int):
+                    lookup_content = "{0}__{1}__value"
+                else:
+                    lookup_content = "{0}__{1}__value__regex"
+                try:
+                    index = form_fields_list.index(field_id)
+                    inner_lookup = models.Q(**{lookup_content.format(self.field_path, index): field_value})
+                    self._create_related_fields_lookup(inner_lookup, fields_id, fields_text, i, field_id, field_id, index+1)
+                    lookup.add(inner_lookup, current_operand)
+                except ValueError:
+                    # searching on multi_fields
+                    inner_lookup = models.Q()
+                    current_field = Field.objects.get(id=field_id)
+                    multi_fields = Field.objects.filter(name__startswith=current_field.name).order_by('name')
+                    if multi_fields.count() > 1:
+                        for field_ in multi_fields[1:]:
+                            index = form_fields_list.index(field_.pk)
+                            related_lookup = models.Q(**{lookup_content: field_value})
+                            self._create_related_fields_lookup(related_lookup, fields_id, fields_text, i, field_.pk, multi_fields[0].pk, index+1)
+                            inner_lookup.add(related_lookup, models.Q.OR)
+                        lookup.add(inner_lookup, current_operand)
+        return lookup
+
+
+    def form_lookups(self):
+        name = self.field.name
+        return (
+            ("%s-field" % name, "%s__contains" % name),
+            ("%s-text" % name, "%s__contains" % name),
+            ("%s-operand" % name, "%s__contains" % name),
+        )
 
 
 class FormFieldThroughInlineAdmin(admin.TabularInline):
@@ -124,6 +201,7 @@ class FieldAdmin(admin.ModelAdmin):
 class FormResponseAdmin(admin.ModelAdmin):
     list_display = ["id", "get_form_title", "user_ip", "show_response"]
     list_display_links = ["id", "get_form_title"]
+    list_filter = [('data', FormResponseFilter)]
     search_fields = ['form__title', 'form__slug']
     readonly_fields = ['id', 'unique_id', 'created_at', 'updated_at']
 

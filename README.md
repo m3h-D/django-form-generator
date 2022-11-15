@@ -15,7 +15,7 @@ there is an API-manager tool for you to call some APIs on loading form or after 
   pip install django-form-generator
   ```
 
-- add (`'django_form_generator'`, `'django_htmx'`, `'crispy_forms'`, `'crispy_bootstrap5'`, `'captcha'`) to your `INSTALLED_APPS`:
+- add (`'django_form_generator'`, `'django_htmx'`, `'crispy_forms'`, `'crispy_bootstrap5'`, `'captcha'`, `'tempus_dominus'`) to your `INSTALLED_APPS`:
   ```python
   INSTALLED_APPS = [
       ...
@@ -23,6 +23,7 @@ there is an API-manager tool for you to call some APIs on loading form or after 
       'crispy_forms',
       'crispy_bootstrap5',
       'captcha',
+      'tempus_dominus',
       'django_form_generator',
   ]
   ```
@@ -326,6 +327,7 @@ you should add below code to your `settings.py`
 )](https://github.com/django-crispy-forms/crispy-bootstrap5)
 3. [REQUESTS](https://requests.readthedocs.io/en/latest/)
 4. [DJANGO-RECAPTCHA](https://pypi.org/project/django-recaptcha/)
+5. [DJANGO-TEMPUS-DOMINUS](https://github.com/FlipperPA/django-tempus-dominus)
 
 ---
 ## License
