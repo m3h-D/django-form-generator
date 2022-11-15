@@ -546,7 +546,7 @@ class FormResponseBase(BaseModel):
             if field_value and  isinstance(field_value, str):
                 field_value = int(field_value) if field_value.isdigit() else field_value
             elif isinstance(field_value, list):
-                field_value = [int(val) if val.isdigit() else val for val in field_value]
+                field_value = [int(val) if isinstance(val, str) and val.isdigit() else val for val in field_value]
 
             new_data = {
                 "id": field.id,
