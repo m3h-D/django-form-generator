@@ -57,7 +57,7 @@ class FormResponseFilter(FormFilter):
         fields_text = self.request.GET.getlist(f'{self.field.name}-text')
         fields_id = self.request.GET.getlist(f'{self.field.name}-field')
         fields_operand = self.request.GET.getlist(f'{self.field.name}-operand')
-        form_id = self.request.GET.get(f'{self.field.name}-form_id', '0')
+        form_id = self.request.GET.get(f'{self.field.name}-form_id')
         if form_id:
             form = Form.objects.prefetch_related('fields').get(id=int(form_id))
             form_fields_list = list(form.get_fields().values_list('id', flat=True))
