@@ -14,7 +14,7 @@
             <fieldset class="module aligned">
                 <div class="form-row field-form">
                     <div>   
-                        <input type="text" name="form_id" id="form_id" class="vForeignKeyRawIdAdminField" placeholder="Select a form">
+                        <input type="text" name="data-form_id" id="form_id" class="vForeignKeyRawIdAdminField" placeholder="Select a form">
                         <a href="{% url 'admin:django_form_generator_form_changelist' %}?_to_field=id" class="related-lookup" id="lookup_form_id" title="Lookup"></a>
                     </div>
                 </div>
@@ -77,7 +77,7 @@
 
     function createFields(){
         const params = new URLSearchParams(window.location.search);
-        var formId = params.get('form_id')
+        var formId = params.get('data-form_id')
         if (formId)
             document.getElementById('form_id').setAttribute('value', formId)
         var ds = new Array();

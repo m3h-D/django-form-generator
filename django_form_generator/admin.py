@@ -57,7 +57,7 @@ class FormResponseFilter(FormFilter):
         fields_text = self.request.GET.getlist(f'{self.field.name}-text')
         fields_id = self.request.GET.getlist(f'{self.field.name}-field')
         fields_operand = self.request.GET.getlist(f'{self.field.name}-operand')
-        form_id = int(self.request.GET.get('form_id', '0'))
+        form_id = int(self.request.GET.get(f'{self.field.name}-form_id', '0'))
         if form_id:
             form = Form.objects.prefetch_related('fields').get(id=form_id)
             form_fields_list = list(form.get_fields().values_list('id', flat=True))
@@ -83,7 +83,7 @@ class FormResponseFilter(FormFilter):
                     if multi_fields.count() > 1:
                         for field_ in multi_fields[1:]:
                             index = form_fields_list.index(field_.pk)
-                            related_lookup = models.Q(**{lookup_content: field_value})
+                            related_lookup = models.Q(**{lookup_content.format(self.field_path, index): field_value})
                             self._create_related_fields_lookup(related_lookup, fields_id, fields_text, i, field_.pk, multi_fields[0].pk, index+1)
                             inner_lookup.add(related_lookup, models.Q.OR)
                         lookup.add(inner_lookup, current_operand)
@@ -93,6 +93,7 @@ class FormResponseFilter(FormFilter):
     def form_lookups(self):
         name = self.field.name
         return (
+            ("%s-form_id" % name, "%s__exact" % name),
             ("%s-field" % name, "%s__contains" % name),
             ("%s-text" % name, "%s__contains" % name),
             ("%s-operand" % name, "%s__contains" % name),
