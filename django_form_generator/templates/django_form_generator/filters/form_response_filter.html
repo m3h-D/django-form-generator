@@ -16,6 +16,9 @@
                     <div>   
                         <input type="text" name="data-form_id" id="form_id" class="vForeignKeyRawIdAdminField" placeholder="Select a form">
                         <a href="{% url 'admin:django_form_generator_form_changelist' %}?_to_field=id" class="related-lookup" id="lookup_form_id" title="Lookup"></a>
+                        <div class="help" id="id_field" style="margin-left: 0%;">
+                            You can use regex on value field
+                        </div>
                     </div>
                 </div>
             </fieldset>
@@ -102,5 +105,42 @@
         while(elements.length > 1){
             elements[0].parentNode.removeChild(elements[0]);
         };
+    };
+    function valueField(e){
+        const url = "{% url 'admin:evaluator_evaluatorformresponse_fetch_values' 0 %}".replace('0', e.target.value);
+        fetch(url, {
+            method: "GET",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+            }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                var x = e.target.parentNode.nextElementSibling;
+                if (data.length > 0){
+                    x.children[0].remove()
+                    var select = document.createElement("select");
+                    for (let i = 0; i < data.length; i++) {
+                        const element = data[i];
+                        var optionElement = document.createElement("option");
+                        optionElement.value = element.id;
+                        optionElement.text = element.name;
+                        select.appendChild(optionElement);
+                        select.name = "data-text";
+                        select.setAttribute('class', 'form-control form-select m-1')
+                        select.setAttribute('id', 'id_data-text')
+                    }
+                    x.append(select)
+                }else{
+                    var input = document.createElement("input")
+                    input.name = 'data-text';
+                    input.setAttribute('class', 'form-control m-1')
+                    input.setAttribute('placeholder', 'response value')
+                    input.setAttribute('id', 'id_data-text')
+                    x.children[0].remove()
+                    x.append(input)
+                }
+            });
     };
 </script>

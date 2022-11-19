@@ -1,9 +1,10 @@
 import uuid
 from django.db import models
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.utils.text import slugify
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django.utils.translation import gettext as _
 from django.db.transaction import atomic
 
 from django_form_generator import const
@@ -31,29 +32,26 @@ class FormResponseFilter(FormFilter):
     template = "django_form_generator/filters/form_response_filter.html"
     form_class = FormResponseFilterForm
 
-    def _create_related_fields_lookup(self, q, fields, fields_text, current_index, current_field_id, related_field_id, index=None):
-        related =  Field.objects.filter(object_id=related_field_id, content_type__model='field').last()
-        if related and str(related.pk) in fields:
-            depended_field = Field.objects.filter(object_id=current_field_id, content_type__model='field').last()
-            if depended_field:
-                try:
-                    depended_field_index = current_index + 1
-                    fields_text[depended_field_index]
-                except IndexError:
-                    depended_field_index = current_index 
-                dp_value = int(fields_text[depended_field_index]) if fields_text[depended_field_index].isdigit() else fields_text[depended_field_index]
-                if index:
-                    if isinstance(dp_value, int):
-                        q.add(models.Q(**{f"{self.field_path}__{index}__value": dp_value}), models.Q.AND)
-                    else:
-                        q.add(models.Q(**{f"{self.field_path}__{index}__value__regex": dp_value}), models.Q.AND)
+    def _create_related_fields_lookup(self, q, form, current_field_id, fields, texts, *, similar_field_index=None):
+        related_fields = form.fields.filter(object_id=current_field_id, content_type__model='field', id__in=fields)
+        for field in related_fields:
+            try:
+                if similar_field_index is not None:
+                    index = fields.index(field.id)
+                    query_index = texts[similar_field_index]
                 else:
-                    q.add(models.Q(**{f"{self.field_path}__contains": [{"id": depended_field.pk, "value": dp_value}]}), models.Q.AND)
+                    query_index = index = fields.index(str(field.id))
+                value = int(texts[index]) if texts[index].isdigit() else texts[index]
+                if isinstance(value, int):
+                    q.add(models.Q(**{f"{self.field_path}__{query_index}__value": value}), models.Q.AND)
+                else:
+                    q.add(models.Q(**{f"{self.field_path}__{query_index}__value__regex": value}), models.Q.AND)
+            except IndexError:
+                ...
         return q
 
     def get_lookups(self):
         lookup = models.Q()
-
         fields_text = self.request.GET.getlist(f'{self.field.name}-text')
         fields_id = self.request.GET.getlist(f'{self.field.name}-field')
         fields_operand = self.request.GET.getlist(f'{self.field.name}-operand')
@@ -61,7 +59,6 @@ class FormResponseFilter(FormFilter):
         if form_id:
             form = Form.objects.prefetch_related('fields').get(id=int(form_id))
             form_fields_list = list(form.get_fields().values_list('id', flat=True))
-
             for i in range(len(fields_text)):
                 field_id = int(fields_id[i])
                 field_value = int(fields_text[i]) if fields_text[i].isdigit() else fields_text[i]
@@ -73,20 +70,25 @@ class FormResponseFilter(FormFilter):
                 try:
                     index = form_fields_list.index(field_id)
                     inner_lookup = models.Q(**{lookup_content.format(self.field_path, index): field_value})
-                    self._create_related_fields_lookup(inner_lookup, fields_id, fields_text, i, field_id, field_id, index+1)
+                    self._create_related_fields_lookup(inner_lookup, form, field_id, fields_id, fields_text)
                     lookup.add(inner_lookup, current_operand)
                 except ValueError:
-                    # searching on multi_fields
+                    # searching on similar fields (same names with number postfix)
                     inner_lookup = models.Q()
                     current_field = Field.objects.get(id=field_id)
-                    multi_fields = Field.objects.filter(name__startswith=current_field.name).order_by('name')
-                    if multi_fields.count() > 1:
-                        for field_ in multi_fields[1:]:
-                            index = form_fields_list.index(field_.pk)
-                            related_lookup = models.Q(**{lookup_content.format(self.field_path, index): field_value})
-                            self._create_related_fields_lookup(related_lookup, fields_id, fields_text, i, field_.pk, multi_fields[0].pk, index+1)
-                            inner_lookup.add(related_lookup, models.Q.OR)
+                    similar_fields = form.fields.filter(name__startswith=current_field.name).exclude(pk=current_field.pk).order_by('name')
+                    if similar_fields.exists():
+                        for field_ in similar_fields:
+                            try:
+                                index = form_fields_list.index(field_.pk)
+                                related_lookup = models.Q(**{lookup_content.format(self.field_path, index): field_value})
+                                self._create_related_fields_lookup(related_lookup, form, field_.pk, form_fields_list, fields_text, similar_field_index=fields_id.index(str(current_field.pk)))
+                                inner_lookup.add(related_lookup, models.Q.OR)
+                            except IndexError:
+                                ...
                         lookup.add(inner_lookup, current_operand)
+        elif len(fields_id) > 0:
+            messages.error(self.request, _("First select a form"))
         return lookup
 
 

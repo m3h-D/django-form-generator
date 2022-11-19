@@ -288,5 +288,5 @@ class FormAdminForm(forms.ModelForm):
 
 class FormResponseFilterForm(forms.Form):
     operand = forms.ChoiceField(choices=(('OR', 'OR'), ('AND', 'AND')),  required=False)
-    field = forms.ModelChoiceField(Field.objects.all(), required=False)
-    text = forms.CharField(max_length=120, required=False, help_text=_("if want to search on DropDown field or Radio or ... enter ID of it from Value table"))
+    field = forms.ModelChoiceField(Field.objects.all(), required=False, widget=forms.widgets.Select(attrs={'onchange': 'valueField(event)'}))
+    text = forms.CharField(max_length=120, required=False)
