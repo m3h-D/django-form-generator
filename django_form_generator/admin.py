@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.http import JsonResponse
 from django.contrib import admin, messages
 from django.utils.text import slugify
 from django.urls import reverse
@@ -8,7 +9,7 @@ from django.utils.translation import gettext as _
 from django.db.transaction import atomic
 
 from django_form_generator import const
-from django_form_generator.common.admins import FormFilter
+from django_form_generator.common.admins import FormFilter, AdminMixin
 from django_form_generator.forms import FieldForm, FormAdminForm, FormResponseFilterForm
 from django_form_generator.models import (
     FieldCategory,
@@ -201,12 +202,13 @@ class FieldAdmin(admin.ModelAdmin):
 
 
 @admin.register(FormResponse)
-class FormResponseAdmin(admin.ModelAdmin):
+class FormResponseAdmin(AdminMixin, admin.ModelAdmin):
     list_display = ["id", "get_form_title", "user_ip", "show_response"]
     list_display_links = ["id", "get_form_title"]
     list_filter = [('data', FormResponseFilter)]
     search_fields = ['form__title', 'form__slug']
     readonly_fields = ['id', 'unique_id', 'created_at', 'updated_at']
+    extra_views = [('fetch_values', 'values/<int:field_id>')]
 
     @admin.display(description="Form Title")
     def get_form_title(self, obj):
@@ -217,6 +219,13 @@ class FormResponseAdmin(admin.ModelAdmin):
         return mark_safe(
             f"<a href='{reverse('django_form_generator:form_response', args=(obj.unique_id, ))}'>Response</a>"
         )
+    
+    def fetch_values(self, request, field_id):
+        values = {}
+        field = Field.objects.get(id=field_id)
+        if field.genre in (const.FieldGenre.selectable_fields()):
+            values = Value.objects.filter(fields__id=field_id).values('id', 'name')
+        return JsonResponse(list(values), safe=False)
 
 @admin.register(FormAPIManager)
 class FormAPIManagerAdmin(admin.ModelAdmin):

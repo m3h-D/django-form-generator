@@ -107,39 +107,48 @@
         };
     };
     function valueField(e){
-        const url = "{% url 'admin:evaluator_evaluatorformresponse_fetch_values' 0 %}".replace('0', e.target.value);
+        const url = "{% url 'admin:django_form_generator_formresponse_fetch_values' 0 %}".replace('0', e.target.value);
         fetch(url, {
             method: "GET",
             headers: {
                 "X-Requested-With": "XMLHttpRequest",
             }
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log(data);
+        })
+        .then(response => response.json())
+        .then(data => {
                 var x = e.target.parentNode.nextElementSibling;
+                let children = new Array();
+                for (let i = 0; i < x.children.length; i++) {
+                    children.push(x.children[i]);
+                }
                 if (data.length > 0){
-                    x.children[0].remove()
                     var select = document.createElement("select");
                     for (let i = 0; i < data.length; i++) {
                         const element = data[i];
                         var optionElement = document.createElement("option");
-                        optionElement.value = element.id;
+                        optionElement.value = `[${element.id}]`;
                         optionElement.text = element.name;
                         select.appendChild(optionElement);
                         select.name = "data-text";
-                        select.setAttribute('class', 'form-control form-select m-1')
-                        select.setAttribute('id', 'id_data-text')
-                    }
-                    x.append(select)
+                        select.setAttribute('id', 'id_data-text');
+                    };
+                    console.log(children.length);
+                    for (let j = 0; j < children.length; j++) {
+                        x.children[0].remove();
+                    };
+                    x.append(select);
                 }else{
                     var input = document.createElement("input")
                     input.name = 'data-text';
-                    input.setAttribute('class', 'form-control m-1')
-                    input.setAttribute('placeholder', 'response value')
-                    input.setAttribute('id', 'id_data-text')
-                    x.children[0].remove()
-                    x.append(input)
+                    input.setAttribute('type', 'text');
+                    input.setAttribute('placeholder', 'response value');
+                    input.setAttribute('id', 'id_data-text');
+                    console.log(children);
+
+                    for (let j = 0; j < children.length; j++) {
+                        x.children[0].remove();
+                    };
+                    x.append(input);
                 }
             });
     };

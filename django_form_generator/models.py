@@ -490,7 +490,7 @@ class FormResponseBase(BaseModel):
                     data["value"]["url"], data["value"]["directory"]
                 )
                 result.append(data_)
-            elif data_["value"] and data["genre"] in (const.FieldGenre.DATETIME, const.FieldGenre.DATE):
+            elif data_["value"] and data_["value"] !='None' and data["genre"] in (const.FieldGenre.DATETIME, const.FieldGenre.DATE):
                 data_["value"] = datetime.fromisoformat(data_["value"])
                 result.append(data_)
             else:
