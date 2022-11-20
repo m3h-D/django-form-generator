@@ -51,11 +51,15 @@ class FormResponseFilter(FormFilter):
                 ...
         return q
 
+    def clean_parameters(self, item):
+        return list(filter(lambda x: x != '', item))
+
     def get_lookups(self):
         lookup = models.Q()
-        fields_text = self.request.GET.getlist(f'{self.field.name}-text')
-        fields_id = self.request.GET.getlist(f'{self.field.name}-field')
-        fields_operand = self.request.GET.getlist(f'{self.field.name}-operand')
+        no_result = False
+        fields_text = self.clean_parameters(self.request.GET.getlist(f'{self.field.name}-text'))
+        fields_id = self.clean_parameters(self.request.GET.getlist(f'{self.field.name}-field'))
+        fields_operand = self.clean_parameters(self.request.GET.getlist(f'{self.field.name}-operand'))
         form_id = self.request.GET.get(f'{self.field.name}-form_id')
         if form_id:
             form = Form.objects.prefetch_related('fields').get(id=int(form_id))
@@ -88,8 +92,12 @@ class FormResponseFilter(FormFilter):
                             except IndexError:
                                 ...
                         lookup.add(inner_lookup, current_operand)
-        elif len(fields_id) > 0:
+                    else:
+                        no_result = True
+        elif len(fields_id) > 0 and fields_id[0] != '':
             messages.error(self.request, _("First select a form"))
+        if no_result:
+            return {'id': 0}
         return lookup
 
 
