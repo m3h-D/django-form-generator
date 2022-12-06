@@ -39,20 +39,26 @@ class FormResponseFilter(FormFilter):
             try:
                 if similar_field_index is not None:
                     index = fields.index(field.id)
-                    query_index = texts[similar_field_index]
+                    query_index = similar_field_index + 1
                 else:
-                    query_index = index = fields.index(str(field.id))
-                value = int(texts[index]) if texts[index].isdigit() else texts[index]
+                    query_index = index = fields.index(field.id)
+                value = int(texts[query_index]) if texts[query_index].isdigit() else texts[query_index]
                 if isinstance(value, int):
-                    q.add(models.Q(**{f"{self.field_path}__{query_index}__value": value}), models.Q.AND)
+                    self._combine(q, models.Q(**{f"{self.field_path}__{index}__value": value}), models.Q.AND, q)
                 else:
-                    q.add(models.Q(**{f"{self.field_path}__{query_index}__value__regex": value}), models.Q.AND)
+                    self._combine(q, models.Q(**{f"{self.field_path}__{index}__value__regex": value}), models.Q.AND, q)
             except IndexError:
                 ...
         return q
 
     def clean_parameters(self, item):
         return list(filter(lambda x: x != '', item))
+
+    def _combine(self, lookup, inner, operand, final_lookup):
+        for r in inner.children:
+            if str(r) not in str(final_lookup) and str(r) not in str(lookup):
+                lookup.add(inner, operand)
+            
 
     def get_lookups(self):
         lookup = models.Q()
@@ -76,7 +82,7 @@ class FormResponseFilter(FormFilter):
                     index = form_fields_list.index(field_id)
                     inner_lookup = models.Q(**{lookup_content.format(self.field_path, index): field_value})
                     self._create_related_fields_lookup(inner_lookup, form, field_id, fields_id, fields_text)
-                    lookup.add(inner_lookup, current_operand)
+                    self._combine(lookup, inner_lookup, current_operand, lookup)
                 except ValueError:
                     # searching on similar fields (same names with number postfix)
                     inner_lookup = models.Q()
@@ -88,10 +94,10 @@ class FormResponseFilter(FormFilter):
                                 index = form_fields_list.index(field_.pk)
                                 related_lookup = models.Q(**{lookup_content.format(self.field_path, index): field_value})
                                 self._create_related_fields_lookup(related_lookup, form, field_.pk, form_fields_list, fields_text, similar_field_index=fields_id.index(str(current_field.pk)))
-                                inner_lookup.add(related_lookup, models.Q.OR)
+                                self._combine(inner_lookup, related_lookup, models.Q.OR, lookup)
                             except IndexError:
                                 ...
-                        lookup.add(inner_lookup, current_operand)
+                        self._combine(lookup, inner_lookup, current_operand, lookup)
                     else:
                         no_result = True
         elif len(fields_id) > 0 and fields_id[0] != '':

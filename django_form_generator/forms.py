@@ -27,7 +27,7 @@ class FormGeneratorBaseForm(forms.Form):
         for field in self.instance.get_fields():
             method = f"prepare_{field.genre}"
             if hasattr(self, method):
-                self.fields[field.name] = getattr(self, method)(field)
+                self.fields[field.name] = getattr(self, method)(self.instance, field)
                 self._handel_required_fields(field, self.fields[field.name])
 
     def _handel_required_fields(self, field, form_field):
@@ -46,90 +46,90 @@ class FormGeneratorBaseForm(forms.Form):
                 else:
                     form_field.widget.attrs.update({'disabled': False})
 
-    def prepare_text_input(self, field: Field):
+    def prepare_text_input(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "field"}
+            form, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {"widget": forms.TextInput(attrs=widget_attrs)}
         )
         return forms.CharField(**field_attrs)
 
-    def prepare_text_area(self, field: Field):
+    def prepare_text_area(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "field"}
+            form, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {"widget": forms.Textarea(attrs=widget_attrs)}
         )
         return forms.CharField(**field_attrs)
 
-    def prepare_number(self, field: Field):
+    def prepare_number(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "field"}
+            form, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {"widget": forms.NumberInput(attrs=widget_attrs)}
         )
         return forms.IntegerField(**field_attrs)
 
-    def prepare_date(self, field: Field):
+    def prepare_date(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "field"}
+            form, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {"widget": DatePicker(attrs=widget_attrs)}
         )
         return forms.DateField(**field_attrs)
 
-    def prepare_time(self, field: Field):
+    def prepare_time(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "field"}
+            form, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {"widget": TimePicker(attrs=widget_attrs)}
         )
         return forms.TimeField(**field_attrs)
 
-    def prepare_datetime(self, field: Field):
+    def prepare_datetime(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "field"}
+            form, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {"widget": DateTimePicker(attrs=widget_attrs)}
         )
         return forms.DateTimeField(**field_attrs)
 
-    def prepare_email(self, field: Field):
+    def prepare_email(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "field"}
+            form, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {"widget": forms.EmailInput(attrs=widget_attrs)}
         )
         return forms.EmailField(**field_attrs)
 
-    def prepare_password(self, field: Field):
+    def prepare_password(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "field"}
+            form, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {"widget": forms.PasswordInput(attrs=widget_attrs)}
         )
         return forms.CharField(**field_attrs)
 
-    def prepare_checkbox(self, field: Field):
+    def prepare_checkbox(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "field"}
+            form, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {"widget": forms.CheckboxInput(attrs=widget_attrs)}
         )
         return forms.BooleanField(**field_attrs)
 
-    def prepare_dropdown(self, field: Field):
+    def prepare_dropdown(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "value"}
+            form, {"content_type": "value"}
         )
         choices = field.get_choices().values_list("id", "name")
         field_attrs: dict = field.build_field_attrs(
@@ -140,9 +140,9 @@ class FormGeneratorBaseForm(forms.Form):
         )
         return forms.ChoiceField(**field_attrs)
 
-    def prepare_multi_checkbox(self, field: Field):
+    def prepare_multi_checkbox(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "value"}
+            form, {"content_type": "value"}
         )
         choices = field.get_choices().values_list("id", "name")
         field_attrs: dict = field.build_field_attrs(
@@ -153,9 +153,9 @@ class FormGeneratorBaseForm(forms.Form):
         )
         return forms.MultipleChoiceField(**field_attrs)
 
-    def prepare_radio(self, field: Field):
+    def prepare_radio(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "value"}
+            form, {"content_type": "value"}
         )
         choices = field.get_choices().values_list("id", "name")
         field_attrs: dict = field.build_field_attrs(
@@ -163,31 +163,31 @@ class FormGeneratorBaseForm(forms.Form):
         )
         return forms.ChoiceField(**field_attrs)
 
-    def prepare_hidden(self, field: Field):
+    def prepare_hidden(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "field"}
+            form, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {"widget": forms.HiddenInput(attrs=widget_attrs)}
         )
         return forms.CharField(**field_attrs)
 
-    def prepare_captcha(self, field: Field):
+    def prepare_captcha(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"content_type": "field"}
+            form, {"content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {"widget": ReCaptchaV2Checkbox(attrs=widget_attrs)}
         )
         return ReCaptchaField(**field_attrs)
 
-    def prepare_upload_file(self, field: Field):
+    def prepare_upload_file(self, form: Form, field: Field):
         message = (
             _("The file size is more than limit (limited size: %s bytes)")
             % field.file_size
         )
         widget_attrs: dict = field.build_widget_attrs(
-            self.instance, {"multiple": True, "content_type": "field"}
+            form, {"multiple": True, "content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {
@@ -226,7 +226,7 @@ class FormGeneratorResponseForm(FormGeneratorBaseForm):
             field_name = field.name
             method = f"prepare_{field.genre}"
             if hasattr(self, method):
-                self.fields[field_name] = getattr(self, method)(field)
+                self.fields[field_name] = getattr(self, method)(self.instance, field)
                 if not self.instance.is_editable:
                     self.fields[field_name].widget.attrs.update({"disabled": True})
                 try:
