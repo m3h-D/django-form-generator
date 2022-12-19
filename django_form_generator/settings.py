@@ -11,6 +11,8 @@ DEFAULTS = {
     'FORM_THEME_CHOICES': 'django_form_generator.const.FormTheme',
     'FORM_MANAGER': 'django_form_generator.managers.FormManager',
     'FORM_GENERATOR_RESPONSE_MODEL': 'django_form_generator.models.FormResponse',
+    'FORM_GENERATOR_SERIALIZER': 'django_form_generator.api.serializers.FormGeneratorSerializer',
+    'FORM_RESPONSE_SERIALIZER': 'django_form_generator.api.serializers.FormGeneratorResponseSerializer',
 }
 
 
@@ -21,6 +23,8 @@ IMPORT_STRINGS = [
     'FORM_THEME_CHOICES',
     'FORM_MANAGER',
     'FORM_GENERATOR_RESPONSE_MODEL',
+    'FORM_GENERATOR_SERIALIZER',
+    'FORM_RESPONSE_SERIALIZER',
 ]
 
 def perform_import(val, setting_name):

@@ -180,6 +180,31 @@ class Form(BaseModel):
                 nulls_last=True),
             "form_field_through__weight",
         )
+    
+    @property
+    def render_fields(self):
+        data = []
+        for field in self.get_fields():
+            field: "Field"
+            form_field_through = self.form_field_through.filter(form_id=self.id).last()  # type: ignore
+            attrs = field.build_serializer_attrs()
+            attrs.update(
+                {
+                    "parent_object_id": field.object_id,
+                    "parent_content_type": getattr(field.content_type, "model", None),
+                    "placeholder": field.placeholder,
+                    "position": form_field_through.position,
+                    "options": field.get_choices().values('id', 'name')
+                })
+            data.append({
+                    "id": field.id,
+                    "name": field.name,
+                    "type": field.genre,
+                    "category": getattr(form_field_through.category, 'title', None),
+                    "attrs": attrs
+                })
+
+        return data
 
 
 class FormFieldThrough(models.Model):
@@ -237,6 +262,8 @@ class Field(BaseModel):
     )
     help_text = models.CharField(
         _("Help Text"), max_length=200, blank=True, null=True)
+    write_only = models.BooleanField(_("Write Only"), default=False)
+    read_only = models.BooleanField(_("Read Only"), default=False)
     regex_pattern = models.CharField(
         _("Regex Pattern"), max_length=500, blank=True, null=True
     )
@@ -292,6 +319,33 @@ class Field(BaseModel):
 
     def __str__(self) -> str:
         return self.label
+
+    def build_serializer_attrs(self, extra_attrs: dict | None = None):
+        attrs = {
+            "allow_null": not self.is_required,
+            "help_text": self.help_text,
+            "label": self.label,
+            "read_only": self.read_only,
+            "write_only": self.write_only,
+            }
+        if self.regex_pattern is not None:
+            attrs.update(
+                {
+                    "validators": [
+                        RegexValidator(self.regex_pattern,
+                                       self.error_message or None)
+                    ]
+                }
+            )
+        if self.default:
+            attrs.update({'initial': self.default})
+
+        if self.error_message:
+            attrs.update({"error_messages": {"Invalid": self.error_message}})
+
+        if extra_attrs:
+            attrs.update(extra_attrs)
+        return attrs
 
     def build_field_attrs(self, extra_attrs: dict | None = None):
         attrs = {

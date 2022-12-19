@@ -15,7 +15,7 @@ there is an API-manager tool for you to call some APIs on loading form or after 
   pip install django-form-generator
   ```
 
-- add (`'django_form_generator'`, `'django_htmx'`, `'crispy_forms'`, `'crispy_bootstrap5'`, `'captcha'`, `'tempus_dominus'`) to your `INSTALLED_APPS`:
+- add (`'django_form_generator'`, `'django_htmx'`, `'crispy_forms'`, `'crispy_bootstrap5'`, `'captcha'`, `'tempus_dominus', 'rest_framework', 'drf_recaptcha'`) to your `INSTALLED_APPS`:
   ```python
   INSTALLED_APPS = [
       ...
@@ -24,6 +24,8 @@ there is an API-manager tool for you to call some APIs on loading form or after 
       'crispy_bootstrap5',
       'captcha',
       'tempus_dominus',
+      'rest_framework',
+      'drf_recaptcha',
       'django_form_generator',
   ]
   ```
@@ -271,11 +273,17 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
   """GET: http://127.0.0.1:8000/form-generator/form/1/"""
   #or 
   reverse('django_form_generator:form_detail', kwargs={'pk': 1})
+  #api:
+  reverse('django_form_generator:api_form_detail', kwargs={'pk': 1})
+
 
   # to access the response of the form you can call this url the kwarg_lookup is UUID field
   """GET: http://127.0.0.1:8000/form-generator/form-response/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/"""
   #or
   reverse('django_form_generator:form_response', kwargs={'unique_id': 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'})
+  #api:
+  reverse('django_form_generator:api_form_response', kwargs={'unique_id': 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'})
+
   ```
 
 - ### Settings:
@@ -289,6 +297,8 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
         'FORM_RESPONSE_FORM': 'django_form_generator.forms.FormGeneratorResponseForm',
         'FORM_THEME_CHOICES': 'django_form_generator.const.FormTheme',
         'FORM_MANAGER': 'django_form_generator.managers.FormManager',
+        'FORM_GENERATOR_SERIALIZER': 'django_form_generator.api.serializers.FormGeneratorSerializer',
+        'FORM_RESPONSE_SERIALIZER': 'django_form_generator.api.serializers.FormGeneratorResponseSerializer',
       }
   ```
 
@@ -309,6 +319,8 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
   ```python
     RECAPTCHA_PUBLIC_KEY = 'public_key'
     RECAPTCHA_PRIVATE_KEY = 'private_key'
+    # ===== FOR DRF =========
+    DRF_RECAPTCHA_SECRET_KEY = "YOUR SECRET KEY"
   ```
 
 

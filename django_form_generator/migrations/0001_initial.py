@@ -240,6 +240,16 @@ class Migration(migrations.Migration):
             name='values',
             field=models.ManyToManyField(help_text='Only for multi value fields like Dropdown, Radio, Checkbox, etc...', related_name='fields', through='django_form_generator.FieldValueThrough', to='django_form_generator.value', verbose_name='Values'),
         ),
+        migrations.AddField(
+            model_name='field',
+            name='read_only',
+            field=models.BooleanField(default=False, verbose_name='Read Only'),
+        ),
+        migrations.AddField(
+            model_name='field',
+            name='write_only',
+            field=models.BooleanField(default=False, verbose_name='Write Only'),
+        ),
         migrations.AddIndex(
             model_name='formresponse',
             index=models.Index(fields=['user_ip'], name='f_g_formresponse_user'),

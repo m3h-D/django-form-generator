@@ -198,7 +198,7 @@ class FieldAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('label', 'genre', 'is_required', 'placeholder', 'default', 'help_text', 'is_active', 'regex_pattern', 'error_message', 'id', 'created_at', 'updated_at')
+            'fields': ('label', 'genre', 'is_required', 'placeholder', 'default', 'help_text', 'is_active', 'read_only', 'write_only', 'regex_pattern', 'error_message', 'id', 'created_at', 'updated_at')
         }),
         ('File', {
             'classes': ('wide',),
