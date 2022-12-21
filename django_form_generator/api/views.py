@@ -3,7 +3,7 @@ from rest_framework import status
 
 from django_form_generator.common.utils import get_client_ip
 from django_form_generator.common.views import BaseAPIView
-from django_form_generator.api.serializers import FormGeneratorResponseSerializer, FormGeneratorSerializer, FormSerializer
+from django_form_generator.api.serializers import FormGeneratorResponseSerializer, FormGeneratorSerializer, FormSerializer, FormFullSerializer
 from django_form_generator.models import Form
 from django_form_generator.settings import form_generator_settings as fg_settings
 
@@ -33,7 +33,8 @@ class FormGeneratorAPIView(BaseAPIView):
     def get(self, request, pk, format=None):
         instance = self.get_object(pk)
         instance.call_pre_apis({"request": request})
-        return Response(instance.render_fields)
+        serializer = FormFullSerializer(instance=instance)
+        return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
         serializer_class = self.get_serializer_class(request)

@@ -19,6 +19,17 @@ class FormSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'slug', 'status']
 
 
+class FormFullSerializer(serializers.ModelSerializer):
+    form_fields = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Form
+        fields = ['title', 'slug', 'status', 'submit_text', 'redirect_url', 'success_message', 'theme', 'direction', 'limit_to', 'valid_from', 'valid_to', 'is_editable', 'form_fields']
+
+    def get_form_fields(self, obj):
+        return obj.render_fields
+
+
 class BaseFormSerializer(serializers.Serializer):
 
     def __init__(self, instance=None, data=None, **kwargs):
@@ -121,6 +132,12 @@ class BaseFormSerializer(serializers.Serializer):
 
 
 class FormGeneratorSerializer(BaseFormSerializer):
+
+    # form = serializers.SerializerMethodField()
+
+    # def get_form(self, obj):
+    #     return FormFullSerializer(self.form)
+
     def __init__(self, instance=None, data=None, *args, **kwargs):
         serializers.Serializer.__init__(self, instance, data, *args, **kwargs)
         self.form = self.context.get('form')
