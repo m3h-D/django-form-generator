@@ -133,7 +133,7 @@ class Form(BaseModel):
             return cached_response
 
         responses = []
-        for api in self.apis.filter(is_active=True, execute_time=execute_time):
+        for api in self.apis.filter(is_active=True, execute_time=execute_time).order_by('form_apis__weight'):
             api: FormAPIManager
             response = APICall(
                 api.method.lower(),
