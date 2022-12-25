@@ -142,8 +142,8 @@ class Form(BaseModel):
                 response_data,
                 headers=api.headers,
             )
-            status_code, result = response.get_result()
-            responses.append((api, status_code, result))
+            status_code, result, body = response.get_result()
+            responses.append((api, status_code, result, body))
         cache.set(cache_key, responses)
         return responses
 
@@ -554,13 +554,13 @@ class FormResponseBase(BaseModel):
     @classmethod
     def _generate_api_result(cls, results):
         data = []
-        for api, status_code, result in results:
+        for api, status_code, result, body in results:
             data.append(
                 {
                     "api": api.id,
                     "url": api.url,
                     "method": api.method,
-                    "body": api.body,
+                    "body": body or api.body,
                     "response_status_code": status_code,
                     "result": result,
                 }
@@ -636,16 +636,16 @@ class FormResponse(FormResponseBase):
 
     @classmethod
     def save_response(cls, form, data, user_ip=None, update_form_response_id=None):
+        api_response = []
+        pre_result = form.call_pre_apis(data)
+        post_result = form.call_post_apis(data)
+        pre = cls._generate_api_result(pre_result)
+        post = cls._generate_api_result(post_result)
+        if pre:
+            api_response.append(pre)
+        if post:
+            api_response.append(post)
         if update_form_response_id is None:
-            api_response = []
-            pre_result = form.call_pre_apis(data)
-            post_result = form.call_post_apis(data)
-            pre = cls._generate_api_result(pre_result)
-            post = cls._generate_api_result(post_result)
-            if pre:
-                api_response.append(pre)
-            if post:
-                api_response.append(post)
             response = FormResponse.objects.create(
                 data=cls._generate_data(form, data),
                 user_ip=user_ip,
@@ -655,6 +655,7 @@ class FormResponse(FormResponseBase):
         else:
             response = FormResponse.objects.get(id=update_form_response_id)
             response.data = cls._generate_data(form, data, response)
+            response.api_response = api_response or response.api_response
             response.save()
         return response
 

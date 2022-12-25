@@ -70,6 +70,9 @@ def evaluate_data(data: str, replace_with: dict|list) -> str | list:
 
 
 class APICall:
+    body = None
+    status_code = None
+    result = None
 
     def __init__(self, method, url, body: str|None=None, data_response: dict|list|None=None, **kwargs):
         request = getattr(requests, method)
@@ -79,14 +82,14 @@ class APICall:
             response = request(url, **kwargs)
         else:
             if data_response is not None:
-                body = evaluate_data(body, data_response) #type: ignore
+                self.body = body = evaluate_data(body, data_response) #type: ignore
             response = request(url, data=body, **kwargs)
         result = response.json()
         self.status_code: int = response.status_code
         self.result: dict = result
 
     def get_result(self) -> tuple[int, dict]:
-        return  self.status_code, self.result
+        return  self.status_code, self.result, self.body
 
 
 class FileSizeValidator(BaseValidator):
