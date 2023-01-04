@@ -8,7 +8,7 @@ from tempus_dominus.widgets import DatePicker, TimePicker, DateTimePicker
 
 from django_form_generator.settings import form_generator_settings as fg_settings
 from django_form_generator.common.utils import FileSizeValidator
-from django_form_generator.models import Field, Form, Value
+from django_form_generator.models import Field, Form, Value, FieldValidator
 from django_form_generator import const
 
 
@@ -182,20 +182,20 @@ class FormGeneratorBaseForm(forms.Form):
         return ReCaptchaField(**field_attrs)
 
     def prepare_upload_file(self, form: Form, field: Field):
-        message = (
-            _("The file size is more than limit (limited size: %s bytes)")
-            % field.file_size
-        )
+        # message = (
+        #     _("The file size is more than limit (limited size: %s bytes)")
+        #     % field.file_size
+        # )
         widget_attrs: dict = field.build_widget_attrs(
             form, {"multiple": True, "content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {
                 "widget": forms.ClearableFileInput(attrs=widget_attrs),
-                "validators": [
-                    FileSizeValidator(field.file_size, message),
-                    FileExtensionValidator(field.get_file_types()),
-                ],
+                # "validators": [
+                #     FileSizeValidator(field.file_size, message),
+                #     FileExtensionValidator(field.get_file_types()),
+                # ],
             }
         )
         return forms.FileField(**field_attrs)
@@ -263,19 +263,12 @@ class FieldForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         if cleaned_data["genre"] == const.FieldGenre.UPLOAD_FILE:
-            if not cleaned_data["file_types"]:
+            data = [val for key, val in self.data.items() if key.startswith('validators') and key.endswith('validator') and val]
+            if const.Validator.FILE_EXTENTION.value not in data or const.Validator.FILE_SIZE.value not in data:
                 raise forms.ValidationError(
-                    _("You should define FileTypes for upload file genre")
+                    _("You should define FileExtention and FileSize validators for upload file genre")
                 )
         return cleaned_data
-
-    def save(self, commit=True):
-        if self.cleaned_data["genre"] == const.FieldGenre.UPLOAD_FILE and (
-            not self.cleaned_data["file_size"] or self.cleaned_data["file_size"] <= 0
-        ):
-            self.instance.file_size = fg_settings.MAX_UPLOAD_FILE_SIZE
-        return super().save(commit)
-
 
 class FormAdminForm(forms.ModelForm):
     theme = forms.ChoiceField(choices=fg_settings.FORM_THEME_CHOICES.choices)  # type: ignore

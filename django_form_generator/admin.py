@@ -15,6 +15,7 @@ from django_form_generator.models import (
     FieldCategory,
     Form,
     Field,
+    FieldValidator,
     FormFieldThrough,
     Value,
     FormResponse,
@@ -185,6 +186,10 @@ class FieldValueThroughInlineAdmin(admin.TabularInline):
     raw_id_fields = ("value",)
 
 
+class FieldValidatorThroughInlineAdmin(admin.TabularInline):
+    model = FieldValidator
+    extra = 1
+
 @admin.register(Field)
 class FieldAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'genre', 'is_active', 'created_at', 'updated_at']
@@ -192,17 +197,13 @@ class FieldAdmin(admin.ModelAdmin):
     list_editable = ['is_active']
     list_filter = ['is_active', 'created_at', 'genre']
     search_fields = ['label', 'name', 'forms__title']
-    inlines = [FieldValueThroughInlineAdmin]
-    readonly_fields = ['id', 'name', 'created_at', 'updated_at']
+    inlines = [FieldValueThroughInlineAdmin, FieldValidatorThroughInlineAdmin]
+    readonly_fields = ['id', 'created_at', 'updated_at']
     form = FieldForm
-
+    prepopulated_fields = {'name': ('label',), }
     fieldsets = (
         (None, {
-            'fields': ('label', 'genre', 'is_required', 'placeholder', 'default', 'help_text', 'is_active', 'read_only', 'write_only', 'regex_pattern', 'error_message', 'id', 'created_at', 'updated_at')
-        }),
-        ('File', {
-            'classes': ('wide',),
-            'fields': ('file_types', 'file_size'),
+            'fields': ('label', 'name', 'genre', 'is_required', 'placeholder', 'default', 'help_text', 'is_active', 'read_only', 'write_only', 'id', 'created_at', 'updated_at')
         }),
         ('Dpendency', {
             'classes': ('wide',),

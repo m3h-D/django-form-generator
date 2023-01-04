@@ -1,7 +1,7 @@
 import uuid
+import ast
 from datetime import datetime
 from django.db import models
-from django.core.validators import RegexValidator
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -264,12 +264,12 @@ class Field(BaseModel):
         _("Help Text"), max_length=200, blank=True, null=True)
     write_only = models.BooleanField(_("Write Only"), default=False)
     read_only = models.BooleanField(_("Read Only"), default=False)
-    regex_pattern = models.CharField(
-        _("Regex Pattern"), max_length=500, blank=True, null=True
-    )
-    error_message = models.CharField(
-        _("Error Message"), max_length=200, blank=True, null=True
-    )
+    # regex_pattern = models.CharField(
+    #     _("Regex Pattern"), max_length=500, blank=True, null=True
+    # )
+    # error_message = models.CharField(
+    #     _("Error Message"), max_length=200, blank=True, null=True
+    # )
     values = models.ManyToManyField(
         "django_form_generator.Value",
         through="django_form_generator.FieldValueThrough",
@@ -281,19 +281,19 @@ class Field(BaseModel):
     )
     is_active = models.BooleanField(_("Is Active"))
     # file
-    file_types = models.CharField(
-        _("Allow File Types"),
-        max_length=100,
-        blank=True,
-        null=True,
-        help_text=_("example: jpg,png"),
-    )
-    file_size = models.IntegerField(
-        _("File Size"),
-        blank=True,
-        null=True,
-        help_text=_("Default value will be set to 50 MB"),
-    )
+    # file_types = models.CharField(
+    #     _("Allow File Types"),
+    #     max_length=100,
+    #     blank=True,
+    #     null=True,
+    #     help_text=_("example: jpg,png"),
+    # )
+    # file_size = models.IntegerField(
+    #     _("File Size"),
+    #     blank=True,
+    #     null=True,
+    #     help_text=_("Default value will be set to 50 MB"),
+    # )
     # depends
     content_type = models.ForeignKey(
         "contenttypes.ContentType",
@@ -328,20 +328,29 @@ class Field(BaseModel):
             "read_only": self.read_only,
             "write_only": self.write_only,
             }
-        if self.regex_pattern is not None:
+        # if self.regex_pattern is not None:
+        #     attrs.update(
+        #         {
+        #             "validators": [
+        #                 RegexValidator(self.regex_pattern,
+        #                                self.error_message or None)
+        #             ]
+        #         }
+        #     )
+        validators = self.validators.filter(is_active=True)
+        if validators.exists():
             attrs.update(
                 {
                     "validators": [
-                        RegexValidator(self.regex_pattern,
-                                       self.error_message or None)
+                        val.generate_validator() for val in validators
                     ]
                 }
             )
         if self.default:
             attrs.update({'initial': self.default})
 
-        if self.error_message:
-            attrs.update({"error_messages": {"Invalid": self.error_message}})
+        # if self.error_message:
+        #     attrs.update({"error_messages": {"Invalid": self.error_message}})
 
         if extra_attrs:
             attrs.update(extra_attrs)
@@ -354,18 +363,28 @@ class Field(BaseModel):
             "label": self.label,
         }
 
-        if self.error_message:
-            attrs.update({"error_messages": {"Invalid": self.error_message}})
-
-        if self.regex_pattern is not None:
+        validators = self.validators.filter(is_active=True)
+        if validators.exists():
             attrs.update(
                 {
                     "validators": [
-                        RegexValidator(self.regex_pattern,
-                                       self.error_message or None)
+                        val.generate_validator() for val in validators
                     ]
                 }
             )
+
+        # if self.error_message:
+        #     attrs.update({"error_messages": {"Invalid": self.error_message}})
+
+        # if self.regex_pattern is not None:
+            # attrs.update(
+            #     {
+            #         "validators": [
+            #             RegexValidator(self.regex_pattern,
+            #                            self.error_message or None)
+            #         ]
+            #     }
+            # )
 
         if self.default is not None:
             attrs.update({"initial": self.default})
@@ -408,6 +427,29 @@ class Field(BaseModel):
 
     def get_file_types(self):
         return self.file_types.replace(" ", ",").replace(", ", ",").split(",")
+
+
+class FieldValidator(BaseModel):
+    field = models.ForeignKey("django_form_generator.Field", verbose_name=_("Field"), on_delete=models.PROTECT, related_name='validators')
+    validator = models.CharField(_("Validator"), choices=const.Validator.choices, max_length=100)
+    value = models.CharField(_("Value"), max_length=255)
+    error_message = models.CharField(_("Error Message"), max_length=500, blank=True, null=True)
+    is_active = models.BooleanField(_("Is Active"), default=True)
+
+    class Meta:
+        unique_together = [
+            ('field', 'validator')
+        ]
+    
+    def __str__(self):
+        return ' | '.join((self.field.name, self.validator, self.value))
+
+    def generate_validator(self):
+        try:
+            value = ast.literal_eval(self.value)
+        except (SyntaxError, ValueError):
+            value = self.value
+        return const.Validator(self.validator).validate(value, self.error_message)
 
 
 class FieldValueThrough(models.Model):

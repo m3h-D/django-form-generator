@@ -292,7 +292,6 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
       DJANGO_FORM_GENERATOR = {
         'FORM_RESPONSE_SAVE': 'django_form_generator.models.save_form_response',
         'FORM_EVALUATIONS': {'form_data': '{{form_data}}'},
-        'MAX_UPLOAD_FILE_SIZE': 5242880, # default: 50 mb 
         'FORM_GENERATOR_FORM': 'django_form_generator.forms.FormGeneratorForm',
         'FORM_RESPONSE_FORM': 'django_form_generator.forms.FormGeneratorResponseForm',
         'FORM_THEME_CHOICES': 'django_form_generator.const.FormTheme',
