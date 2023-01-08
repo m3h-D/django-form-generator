@@ -4,7 +4,7 @@ from datetime import datetime
 from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
-from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.core.cache import cache
 
 from django_form_generator.common.models import BaseModel
@@ -264,12 +264,6 @@ class Field(BaseModel):
         _("Help Text"), max_length=200, blank=True, null=True)
     write_only = models.BooleanField(_("Write Only"), default=False)
     read_only = models.BooleanField(_("Read Only"), default=False)
-    # regex_pattern = models.CharField(
-    #     _("Regex Pattern"), max_length=500, blank=True, null=True
-    # )
-    # error_message = models.CharField(
-    #     _("Error Message"), max_length=200, blank=True, null=True
-    # )
     values = models.ManyToManyField(
         "django_form_generator.Value",
         through="django_form_generator.FieldValueThrough",
@@ -280,20 +274,6 @@ class Field(BaseModel):
         ),
     )
     is_active = models.BooleanField(_("Is Active"))
-    # file
-    # file_types = models.CharField(
-    #     _("Allow File Types"),
-    #     max_length=100,
-    #     blank=True,
-    #     null=True,
-    #     help_text=_("example: jpg,png"),
-    # )
-    # file_size = models.IntegerField(
-    #     _("File Size"),
-    #     blank=True,
-    #     null=True,
-    #     help_text=_("Default value will be set to 50 MB"),
-    # )
     # depends
     content_type = models.ForeignKey(
         "contenttypes.ContentType",
@@ -307,6 +287,8 @@ class Field(BaseModel):
     object_id = models.BigIntegerField(
         _("Depends on Object ID"), blank=True, null=True)
     content_object = GenericForeignKey()
+
+    depends = GenericRelation('self')
 
     class Meta:
         verbose_name = _("Field")
@@ -328,15 +310,6 @@ class Field(BaseModel):
             "read_only": self.read_only,
             "write_only": self.write_only,
             }
-        # if self.regex_pattern is not None:
-        #     attrs.update(
-        #         {
-        #             "validators": [
-        #                 RegexValidator(self.regex_pattern,
-        #                                self.error_message or None)
-        #             ]
-        #         }
-        #     )
         validators = self.validators.filter(is_active=True)
         if validators.exists():
             attrs.update(
@@ -348,10 +321,6 @@ class Field(BaseModel):
             )
         if self.default:
             attrs.update({'initial': self.default})
-
-        # if self.error_message:
-        #     attrs.update({"error_messages": {"Invalid": self.error_message}})
-
         if extra_attrs:
             attrs.update(extra_attrs)
         return attrs
@@ -372,20 +341,6 @@ class Field(BaseModel):
                     ]
                 }
             )
-
-        # if self.error_message:
-        #     attrs.update({"error_messages": {"Invalid": self.error_message}})
-
-        # if self.regex_pattern is not None:
-            # attrs.update(
-            #     {
-            #         "validators": [
-            #             RegexValidator(self.regex_pattern,
-            #                            self.error_message or None)
-            #         ]
-            #     }
-            # )
-
         if self.default is not None:
             attrs.update({"initial": self.default})
 
