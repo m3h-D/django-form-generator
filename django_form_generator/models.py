@@ -12,6 +12,7 @@ from django_form_generator.common.helpers import FileFieldHelper
 from django_form_generator.common.utils import (
     APICall,
     evaluate_data,
+    get_client_ip
 )
 
 from django_form_generator import const
@@ -20,7 +21,7 @@ from django_form_generator.settings import form_generator_settings as fg_setting
 
 CONTENT_TYPE_MODELS_LIMIT = models.Q(
     app_label="django_form_generator", model="field"
-) | models.Q(app_label="django_form_generator", model="value")
+) | models.Q(app_label="django_form_generator", model="option")
 
 
 class FieldCategory(BaseModel):
@@ -72,13 +73,15 @@ class Form(BaseModel):
     success_message = models.CharField(
         _("Success Message"), max_length=255, blank=True, null=True
     )
-    theme = models.CharField(
-        _("Theme"),
+    style = models.CharField(
+        _("Style"),
         max_length=300,
         blank=True,
         null=True,
         help_text=_(
-            "If choose dynamic_fields.html the order of fields depends on position of Field."
+            "Inline: 2 field in every row."
+            "Inorder: 1 field in every row."
+            "dynamic: can dynamicly style the field in FormFieldThrough section/table."
         ),
     )
     direction = models.CharField(
@@ -124,27 +127,46 @@ class Form(BaseModel):
     def get_absolute_url(self):
         return reverse("django_form_generator:form_detail", kwargs={"pk": self.pk})
 
+    def __call_and_set_cache(self, api, cache_key, response_data):
+        response = APICall(
+            api.method.lower(),
+            api.url,
+            api.body,
+            response_data,
+            headers=api.headers,
+        )
+        status_code, result, body = response.get_result()
+        cache.set(cache_key, (api, status_code, result, body))
+        return response
+
     def __call_apis(
         self, execute_time: const.FormAPIManagerExecuteTime, response_data: dict
     ):
-        cache_key = f"FormAPIs_{self.pk}_{execute_time}_{response_data['request'].session.session_key}"
-        cached_response = cache.get(cache_key)
-        if cached_response:
-            return cached_response
+        request = response_data['request']
+        cache_key = "FormAPIs_{}_{}_{}"
 
         responses = []
         for api in self.apis.filter(is_active=True, execute_time=execute_time).order_by('form_apis__weight'):
             api: FormAPIManager
-            response = APICall(
-                api.method.lower(),
-                api.url,
-                api.body,
-                response_data,
-                headers=api.headers,
-            )
-            status_code, result, body = response.get_result()
-            responses.append((api, status_code, result, body))
-        cache.set(cache_key, responses)
+            if api.cache_by:
+                if api.cache_by == const.CacheMethod.SESSION_KEY:
+                    cache_method = request.session.session_key
+                elif api.cache_by == const.CacheMethod.USER_ID and request.user.is_authenticated:
+                    cache_method = request.user.id
+                else:
+                    cache_method = get_client_ip(request)
+                cache_key = cache_key.format(self.pk, execute_time, cache_method)
+                cached_response = cache.get(cache_key)
+                if cached_response:
+                    responses.append(cached_response)
+                else:
+                    response = self.__call_and_set_cache(api, cache_key, response_data)
+                    responses.append(response)
+
+            else:
+                response = self.__call_and_set_cache(api, cache_key, response_data)
+                responses.append(response)
+
         return responses
 
     def call_post_apis(self, response_data: dict):
@@ -264,10 +286,10 @@ class Field(BaseModel):
         _("Help Text"), max_length=200, blank=True, null=True)
     write_only = models.BooleanField(_("Write Only"), default=False)
     read_only = models.BooleanField(_("Read Only"), default=False)
-    values = models.ManyToManyField(
-        "django_form_generator.Value",
-        through="django_form_generator.FieldValueThrough",
-        verbose_name=_("Values"),
+    options = models.ManyToManyField(
+        "django_form_generator.Option",
+        through="django_form_generator.FieldOptionThrough",
+        verbose_name=_("Options"),
         related_name="fields",
         help_text=_(
             "Only for multi value fields like Dropdown, Radio, Checkbox, etc..."
@@ -378,10 +400,7 @@ class Field(BaseModel):
         return attrs
 
     def get_choices(self):
-        return self.values.filter(is_active=True).order_by("field_values__weight")
-
-    def get_file_types(self):
-        return self.file_types.replace(" ", ",").replace(", ", ",").split(",")
+        return self.options.filter(is_active=True).order_by("field_options__weight")
 
 
 class FieldValidator(BaseModel):
@@ -407,18 +426,18 @@ class FieldValidator(BaseModel):
         return const.Validator(self.validator).validate(value, self.error_message)
 
 
-class FieldValueThrough(models.Model):
+class FieldOptionThrough(models.Model):
     field = models.ForeignKey(
         "django_form_generator.Field",
         verbose_name=_("Field"),
         on_delete=models.CASCADE,
-        related_name="field_values",
+        related_name="field_options",
     )
-    value = models.ForeignKey(
-        "django_form_generator.Value",
-        verbose_name=_("Value"),
+    option = models.ForeignKey(
+        "django_form_generator.Option",
+        verbose_name=_("Option"),
         on_delete=models.CASCADE,
-        related_name="field_values",
+        related_name="field_options",
     )
     weight = models.PositiveIntegerField(_("Weight"))
 
@@ -428,16 +447,16 @@ class FieldValueThrough(models.Model):
             fields=("weight",), name="f_g_%(class)s_weight")]
 
     def __str__(self) -> str:
-        return f"{self.field.name} | {self.value.name}"
+        return f"{self.field.name} | {self.option.name}"
 
 
-class Value(BaseModel):
+class Option(BaseModel):
     name = models.CharField(_("Name"), max_length=100)
     is_active = models.BooleanField(_("Is Active"), default=True)
 
     class Meta:
-        verbose_name = _("Value")
-        verbose_name_plural = _("Values")
+        verbose_name = _("Option")
+        verbose_name_plural = _("Options")
         indexes = [
             models.Index(fields=("name",), name="f_g_%(class)s_name"),
         ]
@@ -484,6 +503,7 @@ class FormAPIManager(BaseModel):
         choices=const.FormAPIManagerExecuteTime.choices,
     )
     response = models.TextField(_("Response"), blank=True, null=True)
+    cache_by = models.CharField(_("Cache By"), max_length=15, choices=const.CacheMethod.choices, blank=True, null=True)
     is_active = models.BooleanField(_("Is Active"))
 
     class Meta:

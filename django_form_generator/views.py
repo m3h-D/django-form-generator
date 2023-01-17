@@ -6,7 +6,7 @@ from django.utils.translation import gettext as _
 from django_htmx.http import HttpResponseClientRedirect
 
 from django_form_generator.common.utils import get_client_ip
-from django_form_generator.models import Form, FormResponse
+from django_form_generator.models import Form
 from django_form_generator.forms import FormGeneratorForm
 from django_form_generator.settings import form_generator_settings as fg_settings
 

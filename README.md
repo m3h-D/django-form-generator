@@ -221,21 +221,21 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
   you can access the whole submited data by adding `{{ form_data }}` to your api `body`.
 
 
-- ### Form Theme:
-  to have multiple themes the html of `template_name_p` (attribute of django.forms.Form) will be replace by our html file. (`{{form.as_p}}`)
+- ### Form Style:
+  to have multiple styles the html of `template_name_p` (attribute of django.forms.Form) will be replace by our html file. (`{{form.as_p}}`)
 
-  there are 3 themes(or actualy styel of rendering fields) for the forms:
-    1. In-line Theme[^1].
+  there are 3 styles(or actualy styel of rendering fields) for the forms:
+    1. In-line Style[^1].
 
-    2. In-order Theme[^2].
+    2. In-order Style[^2].
 
-    3. Dynamic Theme[^3].
+    3. Dynamic Style[^3].
    
     [^1]: In every line two fields will be rendered.
 
     [^2]: In every line one field will be rendered.
 
-    [^3]: this theme will render fields respect to the field position (`inline`, `inorder`, `break`)
+    [^3]: this style will render fields respect to the field position (`inline`, `inorder`, `break`)
   
 
   >Note: If you want to render two fields `inline` and one field `inorder` you should use `break` for the second field 
@@ -246,22 +246,22 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
         - field3 inorder 
 
   
-  >Note: You can add your custom themes by create new TextChoices object and add it to `settings.py`
+  >Note: You can add your custom styles by create new TextChoices object and add it to `settings.py`
   
     - example:
       1. *myapp/const.py*
           ```python
           from django.db.models import TextChoices
 
-          class CustomFormGeneratorTheme(TextChoices):
-            MY_THEME = "myapp/templates/my_theme.html", 'My Custom Theme'
+          class CustomFormGeneratorStyle(TextChoices):
+            MY_STYLE = "myapp/templates/my_style.html", 'My Custom Style'
             ...
 
           ```
       2. *myproject/settings.py*
           ```python
             DJANGO_FORM_GENERATOR = {
-              "FORM_THEME_CHOICES": "myapp.const.CustomFormGeneratorTheme"
+              "FORM_STYLE_CHOICES": "myapp.const.CustomFormGeneratorStyle"
             }
           ```
 
@@ -294,7 +294,7 @@ You can use this feature on the (`url`, `body`, `response`) fields of `APIManage
         'FORM_EVALUATIONS': {'form_data': '{{form_data}}'},
         'FORM_GENERATOR_FORM': 'django_form_generator.forms.FormGeneratorForm',
         'FORM_RESPONSE_FORM': 'django_form_generator.forms.FormGeneratorResponseForm',
-        'FORM_THEME_CHOICES': 'django_form_generator.const.FormTheme',
+        'FORM_STYLE_CHOICES': 'django_form_generator.const.FormStyle',
         'FORM_MANAGER': 'django_form_generator.managers.FormManager',
         'FORM_GENERATOR_SERIALIZER': 'django_form_generator.api.serializers.FormGeneratorSerializer',
         'FORM_RESPONSE_SERIALIZER': 'django_form_generator.api.serializers.FormGeneratorResponseSerializer',
@@ -334,11 +334,11 @@ you should add below code to your `settings.py`
 ## Dependency Packages
 ---
 1. [HTMX](https://htmx.org/docs/)
-2. [CRISPY-FORMS (crispy-bootstrap5
-)](https://github.com/django-crispy-forms/crispy-bootstrap5)
+2. [CRISPY-FORMS (crispy-bootstrap5)](https://github.com/django-crispy-forms/crispy-bootstrap5)
 3. [REQUESTS](https://requests.readthedocs.io/en/latest/)
 4. [DJANGO-RECAPTCHA](https://pypi.org/project/django-recaptcha/)
 5. [DJANGO-TEMPUS-DOMINUS](https://github.com/FlipperPA/django-tempus-dominus)
+6. [DJANGO-REST-FRAMEWORK](https://www.django-rest-framework.org/)
 
 ---
 ## License

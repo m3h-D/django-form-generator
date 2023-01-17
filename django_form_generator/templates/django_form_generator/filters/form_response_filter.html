@@ -107,7 +107,7 @@
         };
     };
     function valueField(e){
-        const url = "{% url 'admin:django_form_generator_formresponse_fetch_values' 0 %}".replace('0', e.target.value);
+        const url = "{% url 'admin:django_form_generator_formresponse_fetch_options' 0 %}".replace('0', e.target.value);
         fetch(url, {
             method: "GET",
             headers: {

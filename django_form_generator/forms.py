@@ -1,5 +1,4 @@
 from django import forms
-from django.core.validators import FileExtensionValidator
 from django.utils.translation import gettext as _
 
 from captcha.fields import ReCaptchaField
@@ -7,8 +6,7 @@ from captcha.widgets import ReCaptchaV2Checkbox
 from tempus_dominus.widgets import DatePicker, TimePicker, DateTimePicker
 
 from django_form_generator.settings import form_generator_settings as fg_settings
-from django_form_generator.common.utils import FileSizeValidator
-from django_form_generator.models import Field, Form, Value, FieldValidator
+from django_form_generator.models import Field, Form, Option
 from django_form_generator import const
 
 
@@ -20,7 +18,7 @@ class FormGeneratorBaseForm(forms.Form):
     def __init__(self, form, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance = form
-        self.template_name_p = getattr(self.instance, "theme", self.template_name_p)
+        self.template_name_p = getattr(self.instance, "style", self.template_name_p)
         self._initial_fields()
         
     def _initial_fields(self):
@@ -32,7 +30,7 @@ class FormGeneratorBaseForm(forms.Form):
 
     def _handel_required_fields(self, field, form_field):
         if self.data and field.content_object:
-            if isinstance(field.content_object, Value):
+            if isinstance(field.content_object, Option):
                 field_name = self.instance.get_fields(extra={"id__in":field.content_object.fields.values_list('id', flat=True)}).last().name
                 parent_data = self.data.get(field_name, '')
                 if str(field.object_id) not in parent_data:
@@ -182,20 +180,12 @@ class FormGeneratorBaseForm(forms.Form):
         return ReCaptchaField(**field_attrs)
 
     def prepare_upload_file(self, form: Form, field: Field):
-        # message = (
-        #     _("The file size is more than limit (limited size: %s bytes)")
-        #     % field.file_size
-        # )
         widget_attrs: dict = field.build_widget_attrs(
             form, {"multiple": True, "content_type": "field"}
         )
         field_attrs: dict = field.build_field_attrs(
             {
                 "widget": forms.ClearableFileInput(attrs=widget_attrs),
-                # "validators": [
-                #     FileSizeValidator(field.file_size, message),
-                #     FileExtensionValidator(field.get_file_types()),
-                # ],
             }
         )
         return forms.FileField(**field_attrs)
@@ -271,7 +261,7 @@ class FieldForm(forms.ModelForm):
         return cleaned_data
 
 class FormAdminForm(forms.ModelForm):
-    theme = forms.ChoiceField(choices=fg_settings.FORM_THEME_CHOICES.choices)  # type: ignore
+    style = forms.ChoiceField(choices=fg_settings.FORM_STYLE_CHOICES.choices)  # type: ignore
 
     class Meta:
         model = Form

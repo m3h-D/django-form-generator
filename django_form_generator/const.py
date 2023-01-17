@@ -58,10 +58,10 @@ class FormDirection(TextChoices):
     LTR = 'ltr', _('LTR')
     RTL = 'rtl', _('RTL')
 
-class FormTheme(TextChoices):
-    INLINE = 'django_form_generator/fields/inline_fields.html', _('In-line Theme')
-    INORDER = 'django_form_generator/fields/inorder_fields.html', _('In-order Theme')
-    DYNAMIC = 'django_form_generator/fields/dynamic_fields.html', _('Dynamic Theme')
+class FormStyle(TextChoices):
+    INLINE = 'django_form_generator/fields/inline_fields.html', _('In-line')
+    INORDER = 'django_form_generator/fields/inorder_fields.html', _('In-order')
+    DYNAMIC = 'django_form_generator/fields/dynamic_fields.html', _('Dynamic')
 
 
 class Validator(TextChoices):
@@ -90,3 +90,9 @@ class Validator(TextChoices):
 
     def validate(self, value, error_message=None):
         return self.__validators_map()[self](value, error_message)
+
+
+class CacheMethod(TextChoices):
+    SESSION_KEY = 'session_key', _('Session Key')
+    USER_ID = 'user_id', _('User ID')
+    USER_IP = 'user_ip', _('User IP')

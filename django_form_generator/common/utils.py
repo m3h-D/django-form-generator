@@ -84,11 +84,14 @@ class APICall:
             if data_response is not None:
                 self.body = body = evaluate_data(body, data_response) #type: ignore
             response = request(url, data=body, **kwargs)
-        result = response.json()
+        try:
+            result = response.json()
+            self.result: dict = result
+        except Exception as e:
+            self.result: dict = {"error": response.reason}
         self.status_code: int = response.status_code
-        self.result: dict = result
 
-    def get_result(self) -> tuple[int, dict]:
+    def get_result(self) -> tuple[int, dict, dict]:
         return  self.status_code, self.result, self.body
 
 

@@ -17,10 +17,10 @@ from django_form_generator.models import (
     Field,
     FieldValidator,
     FormFieldThrough,
-    Value,
+    Option,
     FormResponse,
     FormAPIThrough,
-    FieldValueThrough,
+    FieldOptionThrough,
     FormAPIManager,
 )
 
@@ -132,7 +132,7 @@ class FormAPIThroughInlineAdmin(admin.TabularInline):
 
 @admin.register(Form)
 class FormAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'status', 'get_theme', 'created_at', 'updated_at']
+    list_display = ['id', 'title', 'status', 'get_style', 'created_at', 'updated_at']
     list_display_links = ['id', 'title']
     list_editable = ['status']
     list_filter = ['status', 'created_at']
@@ -148,7 +148,7 @@ class FormAdmin(admin.ModelAdmin):
         }),
         ('Style', {
             'classes': ('wide',),
-            'fields': ('theme', 'direction'),
+            'fields': ('style', 'direction'),
         }),
         ('Limitations', {
             'classes': ('wide',),
@@ -156,9 +156,10 @@ class FormAdmin(admin.ModelAdmin):
         }),
     )
 
-    @admin.display(description="Theme")
-    def get_theme(self, obj):
-        return const.FormTheme(obj.theme).label
+    @admin.display(description="Style")
+    def get_style(self, obj):
+        if obj.style:
+            return const.FormStyle(obj.style).label
 
     @atomic
     def clone_action(self, request, queryset):
@@ -180,10 +181,10 @@ class FormAdmin(admin.ModelAdmin):
             fa_through = [FormAPIThrough(form_id=obj.id, **obj_) for obj_ in a_through]
             FormAPIThrough.objects.bulk_create(fa_through)
 
-class FieldValueThroughInlineAdmin(admin.TabularInline):
-    model = FieldValueThrough
+class FieldOptionThroughInlineAdmin(admin.TabularInline):
+    model = FieldOptionThrough
     extra = 1
-    raw_id_fields = ("value",)
+    raw_id_fields = ("option",)
 
 
 class FieldValidatorThroughInlineAdmin(admin.TabularInline):
@@ -197,7 +198,7 @@ class FieldAdmin(admin.ModelAdmin):
     list_editable = ['is_active']
     list_filter = ['is_active', 'created_at', 'genre']
     search_fields = ['label', 'name', 'forms__title']
-    inlines = [FieldValueThroughInlineAdmin, FieldValidatorThroughInlineAdmin]
+    inlines = [FieldOptionThroughInlineAdmin, FieldValidatorThroughInlineAdmin]
     readonly_fields = ['id', 'created_at', 'updated_at']
     form = FieldForm
     prepopulated_fields = {'name': ('label',), }
@@ -223,7 +224,7 @@ class FormResponseAdmin(AdminMixin, admin.ModelAdmin):
     list_filter = [('data', FormResponseFilter)]
     search_fields = ['form__title', 'form__slug']
     readonly_fields = ['id', 'unique_id', 'created_at', 'updated_at']
-    extra_views = [('fetch_values', 'values/<int:field_id>')]
+    extra_views = [('fetch_options', 'options/<int:field_id>')]
 
     @admin.display(description="Form Title")
     def get_form_title(self, obj):
@@ -235,12 +236,12 @@ class FormResponseAdmin(AdminMixin, admin.ModelAdmin):
             f"<a href='{reverse('django_form_generator:form_response', args=(obj.unique_id, ))}'>Response</a>"
         )
     
-    def fetch_values(self, request, field_id):
-        values = {}
+    def fetch_options(self, request, field_id):
+        options = {}
         field = Field.objects.get(id=field_id)
         if field.genre in (const.FieldGenre.selectable_fields()):
-            values = Value.objects.filter(fields__id=field_id).values('id', 'name')
-        return JsonResponse(list(values), safe=False)
+            options = Option.objects.filter(fields__id=field_id).values('id', 'name')
+        return JsonResponse(list(options), safe=False)
 
 @admin.register(FormAPIManager)
 class FormAPIManagerAdmin(admin.ModelAdmin):
@@ -262,8 +263,8 @@ class FieldCategoryAdmin(admin.ModelAdmin):
     readonly_fields = ['id', 'created_at', 'updated_at']
 
 
-@admin.register(Value)
-class ValueAdmin(admin.ModelAdmin):
+@admin.register(Option)
+class OptionAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "is_active", "created_at", "updated_at"]
     list_display_links = ["id", "name"]
     list_filter = ['is_active', 'created_at']

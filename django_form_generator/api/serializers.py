@@ -2,7 +2,7 @@ from django.core.validators import FileExtensionValidator
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 from django_form_generator.common.utils import FileSizeValidator
-from django_form_generator.models import Form, Value, Field
+from django_form_generator.models import Form, Option, Field
 from django_form_generator.settings import form_generator_settings as fg_settings
 from drf_recaptcha.fields import ReCaptchaV3Field
 
@@ -24,7 +24,7 @@ class FormFullSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Form
-        fields = ['title', 'slug', 'status', 'submit_text', 'redirect_url', 'success_message', 'theme', 'direction', 'limit_to', 'valid_from', 'valid_to', 'is_editable', 'form_fields']
+        fields = ['title', 'slug', 'status', 'submit_text', 'redirect_url', 'success_message', 'style', 'direction', 'limit_to', 'valid_from', 'valid_to', 'is_editable', 'form_fields']
 
     def get_form_fields(self, obj):
         return obj.render_fields
@@ -47,7 +47,7 @@ class BaseFormSerializer(serializers.Serializer):
 
     def _handel_required_fields(self, field: Field, form_field):
         if self.initial_data and field.content_object:
-            if isinstance(field.content_object, Value):
+            if isinstance(field.content_object, Option):
                 field_name = self.form.get_fields(extra={"id__in":field.content_object.fields.values_list('id', flat=True)}).last().name
                 parent_data = self.initial_data.get(field_name, '')
                 if (isinstance(parent_data, list) and field.object_id not in parent_data) or (field.object_id == parent_data):
