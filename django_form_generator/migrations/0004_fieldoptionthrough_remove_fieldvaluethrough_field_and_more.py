@@ -38,10 +38,13 @@ class Migration(migrations.Migration):
             name='option',
             options={'verbose_name': 'Option', 'verbose_name_plural': 'Options'},
         ),
-        migrations.RenameIndex(
+        migrations.RemoveIndex(
             model_name='option',
-            new_name='f_g_option_name',
-            old_name='f_g_value_name',
+            name='f_g_value_name',
+        ),
+        migrations.AddIndex(
+            model_name='option',
+            index=models.Index(fields=['name'], name='f_g_option_name'),
         ),
         migrations.RemoveField(
             model_name='field',
