@@ -219,18 +219,16 @@ class FormGeneratorResponseForm(FormGeneratorBaseForm):
 
     def _initial_fields(self):
         form_response_data = self.form_response.get_data()
-        for i, field in enumerate(self.instance.get_fields()):
+        for i, field in enumerate(self.form_response.form.get_fields()):
             field_name = field.name
             method = f"prepare_{field.genre}"
             if hasattr(self, method):
                 self.fields[field_name] = getattr(self, method)(self.instance, field)
-                if not self.instance.is_editable:
-                    self.fields[field_name].widget.attrs.update({"disabled": True})
                 try:
                     initial_value = form_response_data[i].get(
                         "value", None
                     )
-                    if not initial_value and isinstance(initial_value, (list, tuple)):
+                    if (not initial_value and isinstance(initial_value, (list, tuple))) or field.write_only:
                         initial_value = None
                     self.fields[field_name].initial = initial_value
                     if initial_value:
@@ -240,6 +238,9 @@ class FormGeneratorResponseForm(FormGeneratorBaseForm):
                             pass
                 except IndexError:
                     pass
+                
+                if not self.instance.is_editable:
+                    self.fields[field_name].widget.attrs.update({"disabled": True})
                 
                 self._handel_required_fields(field, self.fields[field.name])
 
@@ -261,7 +262,7 @@ class FieldForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if cleaned_data["genre"] == const.FieldGenre.UPLOAD_FILE:
+        if 'genre' in cleaned_data and cleaned_data["genre"] == const.FieldGenre.UPLOAD_FILE:
             data = [val for key, val in self.data.items() if key.startswith('validators') and key.endswith('validator') and val]
             if const.Validator.FILE_EXTENTION.value not in data or const.Validator.FILE_SIZE.value not in data:
                 raise forms.ValidationError(

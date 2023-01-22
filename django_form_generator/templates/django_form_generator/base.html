@@ -25,6 +25,7 @@
     
       const multiInputs = document.querySelectorAll('[multi-input]');
       const multiInputsArray = Array.prototype.slice.call(multiInputs)
+      const isFormEditable = "{{form.instance.is_editable|lower}}" === 'false' && "{{formresponse}}";
 
       function removeRow(e) {
         try {
@@ -39,8 +40,14 @@
         addRowBtn.name = 'addRowBtn';
         addRowBtn.innerHTML = '+';
         addRowBtn.type = 'button';
-        addRowBtn.classList.add('btn', 'btn-outline-success', 'btn-sm', 'addRowBtn');
+        addRowBtn.classList.add('btn', 'btn-sm', 'addRowBtn');
         addRowBtn.onclick = addRow;
+        if (isFormEditable){
+          addRowBtn.setAttribute('disabled', true);
+          addRowBtn.classList.add('btn-secondary')
+        }else{
+          addRowBtn.classList.add('btn-outline-success')
+        }
         return addRowBtn;
       };
 
@@ -53,8 +60,14 @@
         removeRowBtn.name = 'removeRowBtn';
         removeRowBtn.innerHTML = '-';
         removeRowBtn.type = 'button';
-        removeRowBtn.classList.add('btn', 'btn-outline-danger', 'btn-sm', 'removeRowBtn');
+        removeRowBtn.classList.add('btn', 'btn-sm', 'removeRowBtn');
         removeRowBtn.onclick = removeRow;
+        if (isFormEditable){
+          removeRowBtn.setAttribute('disabled', true);
+          removeRowBtn.classList.add('btn-secondary')
+        }else{
+          removeRowBtn.classList.add('btn-outline-danger')
+        }
         return removeRowBtn;
       };
 

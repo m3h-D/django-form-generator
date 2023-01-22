@@ -373,7 +373,8 @@ class Field(BaseModel):
     def build_widget_attrs(self, form, extra_attrs: dict | None = None):
         form_field_through = self.form_field_through.filter(form_id=form.id).last()  # type: ignore
         attrs = {"instance_id": self.pk,
-                 "position": form_field_through.position}
+                 "position": form_field_through.position,
+                 "readonly": self.read_only,}
 
         if self.genre in const.FieldGenre.selectable_fields():
             attrs.update({"onchange": "onElementChange(this)"})

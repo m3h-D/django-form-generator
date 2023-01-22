@@ -222,7 +222,8 @@ class FieldAdmin(admin.ModelAdmin):
     )
 
     def save_form(self, request, form, change):
-        form.instance.name = slugify(form.instance.label, True).replace("-", "_")
+        slug = form.instance.name if form.instance.name else form.instance.label
+        form.instance.name = slugify(slug, True).replace("-", "_").replace(" ", "_")
         return super().save_form(request, form, change)
 
 
