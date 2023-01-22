@@ -1,5 +1,4 @@
 import uuid
-import ast
 from datetime import datetime
 from django.db import models
 from django.urls import reverse
@@ -127,7 +126,7 @@ class Form(BaseModel):
     def get_absolute_url(self):
         return reverse("django_form_generator:form_detail", kwargs={"pk": self.pk})
 
-    def __call_and_set_cache(self, api, cache_key, response_data):
+    def __call_and_set_cache(self, api, cache_key, response_data, set_cache):
         response = APICall(
             api.method.lower(),
             api.url,
@@ -136,8 +135,9 @@ class Form(BaseModel):
             headers=api.headers,
         )
         status_code, result, body = response.get_result()
-        cache.set(cache_key, (api, status_code, result, body))
-        return response
+        if set_cache:
+            cache.set(cache_key, (api, status_code, result, body))
+        return api, status_code, result, body
 
     def __call_apis(
         self, execute_time: const.FormAPIManagerExecuteTime, response_data: dict
@@ -160,11 +160,11 @@ class Form(BaseModel):
                 if cached_response:
                     responses.append(cached_response)
                 else:
-                    response = self.__call_and_set_cache(api, cache_key, response_data)
+                    response = self.__call_and_set_cache(api, cache_key, response_data, True)
                     responses.append(response)
 
             else:
-                response = self.__call_and_set_cache(api, cache_key, response_data)
+                response = self.__call_and_set_cache(api, cache_key, response_data, False)
                 responses.append(response)
 
         return responses
@@ -419,11 +419,7 @@ class FieldValidator(BaseModel):
         return ' | '.join((self.field.name, self.validator, self.value))
 
     def generate_validator(self):
-        try:
-            value = ast.literal_eval(self.value)
-        except (SyntaxError, ValueError):
-            value = self.value
-        return const.Validator(self.validator).validate(value, self.error_message)
+        return const.Validator(self.validator).validate(self.value, self.error_message)
 
 
 class FieldOptionThrough(models.Model):
@@ -590,34 +586,15 @@ class FormResponseBase(BaseModel):
         request = form_data["request"]
         for field in form.get_fields():
             field_value = form_data.get(field.name, None)
-            if field.genre in (const.FieldGenre.DATE,
-                               const.FieldGenre.TIME,
-                               const.FieldGenre.DATETIME):
-                field_value = str(field_value)
-            if field.genre == const.FieldGenre.CAPTCHA:
-                continue
-            category_title = None
-            category = field.form_field_through.filter(
-                form_id=form.pk).last().category
-            if category:
-                category_title = category.title
-            if (
-                field_value is not None
-                and not isinstance(field_value, dict)
-                and field.genre == const.FieldGenre.UPLOAD_FILE
-            ):
-                try:
-                    if instance is not None:
-                        instance_directory = instance.pure_data[field.name]["directory"]
-                except:
-                    instance_directory = None
-                form_data[field.name] = FileFieldHelper.upload_file(
-                    request._current_scheme_host, field_value, instance_directory
-                )
-            if field_value and  isinstance(field_value, str):
-                field_value = int(field_value) if field_value.isdigit() else field_value
-            elif isinstance(field_value, list):
-                field_value = [int(val) if isinstance(val, str) and val.isdigit() else val for val in field_value]
+            kwargs = {}
+            if field.genre == const.FieldGenre.UPLOAD_FILE:
+                pure_data = instance.pure_data.get(field.name) if instance else None
+                kwargs.update({'host':  request._current_scheme_host,
+                            'instance_directory': pure_data.get("directory") if pure_data else None })
+            field_value = const.FieldGenre(field.genre).evaluate(field_value, **kwargs)
+
+            category_title = field.form_field_through.filter(form_id=form.pk). \
+                values_list('category__title', flat=True).last()
 
             new_data = {
                 "id": field.id,
@@ -630,8 +607,7 @@ class FormResponseBase(BaseModel):
             }
             if field.content_object:
                 new_data["depends_on"] = {"id": field.object_id, 
-                                            "type": field.content_type.model,
-                                            "value": next((form_data.get(i.name, None) for i in form.get_fields() if i.name == field.content_object.name), None)}
+                                            "type": field.content_type.model}
             data.append(
                 new_data
             )

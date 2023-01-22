@@ -10,7 +10,7 @@ from django.db.transaction import atomic
 
 from django_form_generator import const
 from django_form_generator.common.admins import FormFilter, AdminMixin
-from django_form_generator.forms import FieldForm, FormAdminForm, FormResponseFilterForm
+from django_form_generator.forms import FieldForm, FormAdminForm, FormResponseFilterForm, ValidatorAdminForm
 from django_form_generator.models import (
     FieldCategory,
     Form,
@@ -122,12 +122,16 @@ class FormFieldThroughInlineAdmin(admin.TabularInline):
     model = FormFieldThrough
     extra = 1
     raw_id_fields = ("field",)
+    verbose_name = _('Field')
+    verbose_name_plural = _('Fields')
 
 
 class FormAPIThroughInlineAdmin(admin.TabularInline):
     model = FormAPIThrough
     extra = 1
     raw_id_fields = ("api",)
+    verbose_name = _('API')
+    verbose_name_plural = _('APIs')
 
 
 @admin.register(Form)
@@ -185,11 +189,16 @@ class FieldOptionThroughInlineAdmin(admin.TabularInline):
     model = FieldOptionThrough
     extra = 1
     raw_id_fields = ("option",)
+    verbose_name = _('Option')
+    verbose_name_plural = _('Options')
 
 
 class FieldValidatorThroughInlineAdmin(admin.TabularInline):
     model = FieldValidator
+    form = ValidatorAdminForm
     extra = 1
+    verbose_name = _('Validator')
+    verbose_name_plural = _('Validators')
 
 @admin.register(Field)
 class FieldAdmin(admin.ModelAdmin):

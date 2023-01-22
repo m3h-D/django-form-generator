@@ -1,5 +1,6 @@
 from django.db.models import TextChoices
 from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
 from django.core.validators import (MaxValueValidator, 
                                     MinValueValidator, 
                                     MaxLengthValidator, 
@@ -18,6 +19,7 @@ class FormStatus(TextChoices):
 
 class FieldGenre(TextChoices):
     TEXT_INPUT = 'text_input', _('Text input')
+    MULTI_TEXT_INPUT = 'multi_text_input', _('Multi-Text input')
     TEXT_AREA = 'text_area', _('Text area')
     NUMBER = 'number', _('Number')
     DROPDOWN = 'dropdown', _('Dropdown')
@@ -36,6 +38,83 @@ class FieldGenre(TextChoices):
     @classmethod
     def selectable_fields(cls):
         return [cls.DROPDOWN, cls.CHECKBOX, cls.RADIO, cls.MULTI_CHECKBOX]
+
+    def evaluate(self, value, **kwargs):
+        return getattr(self, "eval_" + self.name.lower())(value, **kwargs)
+
+    def eval_text_input(self, value, **kwargs):
+        if value is None or value == '':
+            return None
+        return str(value)
+
+    def eval_multi_text_input(self, value, **kwargs):
+        if value is None or value == '':
+            return []
+        if isinstance(value, list):
+            return [str(val) for val in value]
+        else:
+            return []
+
+    def eval_text_area(self, value, **kwargs):
+        if value is None or value == '':
+            return value
+        return self.eval_text_input(value)
+
+    def eval_number(self, value, **kwargs):
+        if value is None or value == '':
+            return None
+        return int(value)
+
+    def eval_dropdown(self, value, **kwargs):
+        return self.eval_number(value)
+
+    def eval_date(self, value, **kwargs):
+        return self.eval_text_input(value)
+
+    def eval_time(self, value, **kwargs):
+        return self.eval_text_input(value)
+
+    def eval_datetime(self, value, **kwargs):
+        return self.eval_text_input(value)
+
+    def eval_email(self, value, **kwargs):
+        return self.eval_text_input(value)
+
+    def eval_password(self, value, **kwargs):
+        return self.eval_text_input(value)
+
+    def eval_checkbox(self, value, **kwargs):
+        return self.eval_number(value)
+
+    def eval_multi_checkbox(self, value, **kwargs):
+        if value is None or value == '':
+            return []
+        if isinstance(value, list):
+            return [int(val) for val in value]
+        else:
+            return []
+
+    def eval_radio(self, value, **kwargs):
+        return self.eval_number(value)
+
+    def eval_hidden(self, value, **kwargs):
+        return self.eval_text_input(value)
+
+    def eval_captcha(self, value, **kwargs):
+        return None
+
+    def eval_upload_file(self, value, **kwargs):
+        FileFieldHelper = import_string('django_form_generator.common.helpers.FileFieldHelper')
+
+        if (
+            value is not None
+            and not isinstance(value, dict)
+        ):
+            return FileFieldHelper.upload_file(
+                kwargs['host'], value, kwargs['instance_directory']
+            )
+        return  value
+
 
 class FormAPIManagerMethod(TextChoices):
     GET = 'get', _('GET')
@@ -71,7 +150,7 @@ class Validator(TextChoices):
     MIN_VALUE = 'min-value', _('Min value')
     REGEX = 'regex', _('Regex')
     FILE_EXTENTION = 'file-extention', _('File extention')
-    FILE_SIZE = 'file-size', _('File size')
+    FILE_SIZE = 'file-size', _('File size (MB)')
 
     @classmethod
     def __validators_map(cls):
@@ -88,7 +167,57 @@ class Validator(TextChoices):
         }
         return validators_map
 
+    def clean(self, value):
+        getattr(self, "clean_" + self.name.lower())(value)
+
+    def evaluate(self, value):
+        return getattr(self, "eval_" + self.name.lower())(value)
+
+    def eval_max_length(self, value):
+        return int(value)
+
+    def eval_min_length(self, value):
+        return int(value)
+
+    def eval_max_value(self, value):
+        return int(value)
+
+    def eval_min_value(self, value):
+        return int(value)
+
+    def eval_file_extention(self, value):
+        return value.split(',')
+
+    def eval_file_size(self, value):
+        return float(value) * 2 ** 20
+
+    def clean_max_length(self, value):
+        try:
+            int(value)
+        except ValueError:
+            raise ValidationError(_("Value for %s should be integer") % self.label)
+
+    def clean_min_length(self, value):
+        self.clean_max_length(value)
+
+    def clean_max_value(self, value):
+        self.clean_max_length(value)
+
+    def clean_min_value(self, value):
+        self.clean_max_length(value)
+
+    def clean_file_extention(self, value):
+        if ',' not in value and len(value.split(' ')) > 1:
+            raise ValidationError(_('Separate values with comma for %s like: jpg,png,...') % self.label)
+
+    def clean_file_size(self, value):
+        try:
+            float(value)
+        except ValueError:
+            raise ValidationError(_("Value for %s should be integer or float") % self.label)
+
     def validate(self, value, error_message=None):
+        value = self.evaluate(value)
         return self.__validators_map()[self](value, error_message)
 
 

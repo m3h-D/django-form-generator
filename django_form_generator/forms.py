@@ -6,12 +6,9 @@ from captcha.widgets import ReCaptchaV2Checkbox
 from tempus_dominus.widgets import DatePicker, TimePicker, DateTimePicker
 
 from django_form_generator.settings import form_generator_settings as fg_settings
-from django_form_generator.models import Field, Form, Option
+from django_form_generator.models import Field, Form, Option, FieldValidator
+from django_form_generator.fields import MultiInputWidgetField, MultiInputField, CustomeSelectFormField
 from django_form_generator import const
-
-
-class CustomeSelectFormField(forms.Select):
-    option_inherits_attrs = True
 
 
 class FormGeneratorBaseForm(forms.Form):
@@ -31,7 +28,8 @@ class FormGeneratorBaseForm(forms.Form):
     def _handel_required_fields(self, field, form_field):
         if self.data and field.content_object:
             if isinstance(field.content_object, Option):
-                field_name = self.instance.get_fields(extra={"id__in":field.content_object.fields.values_list('id', flat=True)}).last().name
+                field_name = self.instance.get_fields(extra={"id__in":
+                                                field.content_object.fields.values_list('id', flat=True)}).last().name
                 parent_data = self.data.get(field_name, '')
                 if str(field.object_id) not in parent_data:
                     form_field.required = False
@@ -52,6 +50,15 @@ class FormGeneratorBaseForm(forms.Form):
             {"widget": forms.TextInput(attrs=widget_attrs)}
         )
         return forms.CharField(**field_attrs)
+
+    def prepare_multi_text_input(self, form: Form, field: Field):
+        widget_attrs: dict = field.build_widget_attrs(
+            form, {"content_type": "field", "multi-input": True}
+        )
+        field_attrs: dict = field.build_field_attrs(
+            {"widget": MultiInputWidgetField(attrs=widget_attrs)}
+        )
+        return MultiInputField(**field_attrs)
 
     def prepare_text_area(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
@@ -127,7 +134,7 @@ class FormGeneratorBaseForm(forms.Form):
 
     def prepare_dropdown(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            form, {"content_type": "value"}
+            form, {"content_type": "option"}
         )
         choices = field.get_choices().values_list("id", "name")
         field_attrs: dict = field.build_field_attrs(
@@ -140,7 +147,7 @@ class FormGeneratorBaseForm(forms.Form):
 
     def prepare_multi_checkbox(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            form, {"content_type": "value"}
+            form, {"content_type": "option"}
         )
         choices = field.get_choices().values_list("id", "name")
         field_attrs: dict = field.build_field_attrs(
@@ -153,7 +160,7 @@ class FormGeneratorBaseForm(forms.Form):
 
     def prepare_radio(self, form: Form, field: Field):
         widget_attrs: dict = field.build_widget_attrs(
-            form, {"content_type": "value"}
+            form, {"content_type": "option"}
         )
         choices = field.get_choices().values_list("id", "name")
         field_attrs: dict = field.build_field_attrs(
@@ -223,6 +230,8 @@ class FormGeneratorResponseForm(FormGeneratorBaseForm):
                     initial_value = form_response_data[i].get(
                         "value", None
                     )
+                    if not initial_value and isinstance(initial_value, (list, tuple)):
+                        initial_value = None
                     self.fields[field_name].initial = initial_value
                     if initial_value:
                         try:
@@ -268,6 +277,17 @@ class FormAdminForm(forms.ModelForm):
         fields = "__all__"
 
 
+class ValidatorAdminForm(forms.ModelForm):
+
+    class Meta:
+        model = FieldValidator
+        fields = '__all__'
+
+    def clean_value(self):
+        value = self.cleaned_data['value']
+        if value:
+            const.Validator(self.cleaned_data['validator']).clean(value)
+        return value
 
 class FormResponseFilterForm(forms.Form):
     operand = forms.ChoiceField(choices=(('OR', 'OR'), ('AND', 'AND')),  required=False)

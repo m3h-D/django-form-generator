@@ -37,7 +37,7 @@ integrity="sha384-OXTEbYDqaX2ZY/BOaZV/yFGChYHtrXH2nyXJ372n2Y8abBhrqacCEe+3qhSHtL
             element.setAttribute('parent_answer', current.attr('instance_id'))
             if(current[0].type == 'select-one' || current.attr('type') == 'checkbox'){
                 element.setAttribute('parent_value_answer', current.val())
-                if($(`*[value=${element.getAttribute('parent_value_answer')}][content_type=value]`).is(':checked')){
+                if($(`*[value=${element.getAttribute('parent_value_answer')}][content_type=option]`).is(':checked')){
                     element.removeAttribute('disabled');
                 }else{
                     element.setAttribute('disabled', true);

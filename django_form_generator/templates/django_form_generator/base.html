@@ -21,6 +21,72 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8"
         crossorigin="anonymous"></script>
+    <script>
+    
+      const multiInputs = document.querySelectorAll('[multi-input]');
+      const multiInputsArray = Array.prototype.slice.call(multiInputs)
+
+      function removeRow(e) {
+        try {
+          e.target.parentNode.remove();
+        } catch (error) {
+          e.parentNode.remove()
+        }
+      };
+
+      function createAddRowBtn(){
+        const addRowBtn = document.createElement("button");
+        addRowBtn.name = 'addRowBtn';
+        addRowBtn.innerHTML = '+';
+        addRowBtn.type = 'button';
+        addRowBtn.classList.add('btn', 'btn-outline-success', 'btn-sm', 'addRowBtn');
+        addRowBtn.onclick = addRow;
+        return addRowBtn;
+      };
+
+      function createRemoveRowBtn(clonedDiv){
+        if (clonedDiv.children.length == 4){
+          clonedDiv.children[3].onclick = removeRow;
+          return null;
+        }
+        var removeRowBtn = document.createElement("button");
+        removeRowBtn.name = 'removeRowBtn';
+        removeRowBtn.innerHTML = '-';
+        removeRowBtn.type = 'button';
+        removeRowBtn.classList.add('btn', 'btn-outline-danger', 'btn-sm', 'removeRowBtn');
+        removeRowBtn.onclick = removeRow;
+        return removeRowBtn;
+      };
+
+
+      function addRow(e, value=null){
+        var firstInput = document.querySelectorAll('[multi-input]');
+        var clonedDiv = firstInput[0].parentNode.cloneNode(true);
+        clonedDiv.children[1].value = value;
+        clonedDiv.children[2].onclick = addRow;
+        var removeRowBtn = createRemoveRowBtn(clonedDiv)
+        if (removeRowBtn){
+          clonedDiv.append(removeRowBtn);
+        }
+
+        try {
+          e.target.parentNode.parentNode.append(clonedDiv);
+        } catch (error) {
+          e.parentNode.parentNode.append(clonedDiv)
+        }
+        
+      };
+
+      multiInputs.forEach(element => {
+          if (multiInputsArray.indexOf(element) != 0){
+            element.parentNode.append(createRemoveRowBtn());
+          }
+          element.parentNode.classList.add('input-group');
+          element.parentNode.append(createAddRowBtn());
+      });
+
+
+    </script>
     {% block scripts %}{% endblock scripts %}
 </body>
 

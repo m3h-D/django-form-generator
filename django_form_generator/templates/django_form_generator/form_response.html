@@ -32,6 +32,15 @@ integrity="sha384-OXTEbYDqaX2ZY/BOaZV/yFGChYHtrXH2nyXJ372n2Y8abBhrqacCEe+3qhSHtL
 {% block scripts %}
 <script>
 
+    multiInputs.forEach(element => {
+        var values = eval(element.value);
+        values.forEach(element2 => {
+            addRow(element, value=element2)
+        });
+        if (values.length > 0)
+            removeRow(element);
+    });
+
     function onElementChange(arg){
         var current = $(arg);
         var objId = null;
