@@ -264,6 +264,11 @@ class FormFieldThrough(models.Model):
         indexes = [
             models.Index(fields=("weight",), name="f_g_%(class)s_weight"),
         ]
+        constraints = [
+            models.UniqueConstraint(fields=['field', 'form'],
+                name='form_field_unique',
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.form.title} | {self.field.name}"

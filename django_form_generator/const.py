@@ -84,7 +84,7 @@ class FieldGenre(TextChoices):
         return self.eval_text_input(value)
 
     def eval_checkbox(self, value, **kwargs):
-        return self.eval_number(value)
+        return bool(value)
 
     def eval_multi_checkbox(self, value, **kwargs):
         if value is None or value == '':
