@@ -225,3 +225,16 @@ class CacheMethod(TextChoices):
     SESSION_KEY = 'session_key', _('Session Key')
     USER_ID = 'user_id', _('User ID')
     USER_IP = 'user_ip', _('User IP')
+
+class FieldLookupType(TextChoices):
+    ICONTAINS = 'icontains', 'Contains'
+    IEXACT = 'iexact', 'Exact'
+    ISNULL = 'isnull', 'Is null'
+    IREGEX = 'iregex', 'Regex'
+    RANGE = 'range', 'Range'
+    IN = 'in', 'In'
+    NOT_ICONTAINS = 'not_icontains', 'Not contains'
+    NOT_IEXACT = 'not_iexact', 'Not exact'
+    NOT_IREGEX = 'not_iregex', 'Not regex'
+    NOT_RANGE = 'not_range', 'Not range'
+    NOT_IN = 'not_in', 'Not in'
