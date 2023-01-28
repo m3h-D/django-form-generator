@@ -293,4 +293,6 @@ class ValidatorAdminForm(forms.ModelForm):
 class FormResponseFilterForm(forms.Form):
     operand = forms.ChoiceField(choices=(('OR', 'OR'), ('AND', 'AND')),  required=False)
     field = forms.ModelChoiceField(Field.objects.all(), required=False, widget=forms.widgets.Select(attrs={'onchange': 'valueField(event)'}))
-    text = forms.CharField(max_length=120, required=False)
+    field_lookup = forms.ChoiceField(choices=const.FieldLookupType.choices,  required=False,
+         widget=forms.widgets.Select(attrs={'onchange': 'typeField(event)'}))
+    value = forms.CharField(max_length=120, required=False)

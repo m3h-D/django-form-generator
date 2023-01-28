@@ -1,14 +1,18 @@
 import requests
 import uuid
 import os
+import ast
 from pathlib import Path
+from typing import Any
 from django.conf import settings
 from django.template import Template, Context
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
 from django.core.validators import BaseValidator
+from django.utils.module_loading import import_string
+from django.db import models
 
-from django_form_generator.const import FormAPIManagerMethod
+from django_form_generator.const import FormAPIManagerMethod, FieldLookupType
 from django_form_generator.settings import form_generator_settings as fg_settings
 
 
@@ -99,3 +103,102 @@ class FileSizeValidator(BaseValidator):
 
     def compare(self, file_, limit_value):
         return file_.size > limit_value
+
+
+class FilterMixin:
+
+    field_path = 'data'
+    _filters: set = set()
+    
+    def clean_parameters(self, item):
+        return list(filter(lambda x: x != '', item))
+
+    def _evaluate_value(self, value):
+        try:
+            value = ast.literal_eval(value)
+        except (ValueError, SyntaxError):
+            value = str(value)
+        return value
+
+    def _evaluate_filter(self, field_id:int, index: int, value: Any, field_lookup: str) -> models.Q:
+        if field_lookup.startswith('not'):
+            field_lookup = field_lookup.lstrip('not_')
+            negate = True
+        else:
+            negate = False
+        lookup = '__' + FieldLookupType(field_lookup).value
+        inner_lookup = models.Q(**{f"{self.field_path}__{index}__value{lookup}": value}) \
+            & models.Q(**{f"{self.field_path}__{index}__id": field_id})
+        if negate:
+            i_lookup = ~inner_lookup
+            inner_lookup = i_lookup
+        
+        return inner_lookup
+
+    def _evaluate_related_field(self, response: "FormResponse", form: "Form", field_id: int, field_ids: list[str], values:list[str], index:int, field_lookup: str):
+        fields = form.get_fields(extra={"object_id": field_id, "content_type__model": 'field', "id__in": field_ids})
+        for field in fields.iterator():
+            value =  self._evaluate_value(values[index])
+            new_filters = self._evaluate_filter(field.pk, index, value, field_lookup)
+            if str(new_filters) not in self._filters:
+                query = response.filter(new_filters)
+                self._filters.add(str(new_filters))
+                return models.Exists(query)
+
+    def get_parameters(self, request) -> tuple[str, list[str], list[str], list[str], list[str]]:
+        form_id: str = request.GET.get('form_id')
+        field_ids: list[str] = self.clean_parameters(request.GET.getlist('field_id'))
+        field_lookups: list[str] = self.clean_parameters(request.GET.getlist('field_lookup'))
+        operands: list[str] = self.clean_parameters(request.GET.getlist('operand'))
+        values: list[str] = self.clean_parameters(request.GET.getlist('value'))
+        return form_id ,field_ids ,field_lookups ,operands ,values
+
+
+    def get_lookups(self, request):
+        form_id ,field_ids ,field_lookups ,operands ,values = self.get_parameters(request)
+        if form_id:
+            Form = import_string('django_form_generator.models.Form')
+            FormResponse = import_string('django_form_generator.models.FormResponse')
+
+            form = Form.objects.prefetch_related('fields').get(id=int(form_id))
+            response = FormResponse.objects.filter(form_id=int(form_id))
+            if response.exists():
+                self._filters: set = set()
+                response_annotations: dict = {}
+                response_filters: models.Q = models.Q()
+                for i in range(len(values)):
+                    field_id = int(field_ids[i])
+                    field_lookup = field_lookups[i]
+                    operand = operands[i]
+                    form_fields_list = form.get_fields()
+                    value = self._evaluate_value(values[i])
+                    current_field = form_fields_list.only('id', 'name').get(id=field_id)
+                    related_index = next((field_ids.index(str(f.id)) 
+                                        for f in current_field.depends.values_list('id', flat=True) 
+                                        if str(f.id) in field_ids), None)
+                    index = list(form_fields_list.values_list('id', flat=True)).index(field_id)
+                    new_filters = self._evaluate_filter(field_id, index, value, field_lookup)
+                    new_filters_ = models.Q()
+                    if related_index:
+                        # generate related field lookup & annotation and add it to current field lookup
+                        related_exists = self._evaluate_related_field(response, form, field_id, field_ids, values, related_index, filters, field_lookups[related_index])
+                        if related_exists:
+                            response_annotations.update({f'{field_id}_related_exists': related_exists})
+                            related_lookup = models.Q(**{f'{field_id}_related_exists': True})
+
+                            new_filters.add(related_lookup, models.Q.AND)
+                            new_filters_.add(related_lookup, models.Q.AND)
+                    if str(new_filters) not in self._filters: # check if this filter is not duplicate
+                        self._filters.add(str(new_filters))
+                        exists = models.Exists(response.filter(new_filters, id=models.OuterRef('id')))
+                        response_annotations.update({f'{field_id}_exists':exists})
+                        new_filters_.add(models.Q(**{f'{field_id}_exists': True}), operand)
+                        response_filters.add(new_filters_, operand)
+
+                response_filters.add(models.Q(form_id=int(form_id)), models.Q.AND)
+                return response_filters, response_annotations
+        return models.Q(), {}
+
+    def get_queryset(self, request, queryset):
+        response_filters, response_annotations = self.get_lookups(request)
+        return queryset.alias(**response_annotations).filter(response_filters)

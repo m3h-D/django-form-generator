@@ -10,6 +10,7 @@ from django.db.transaction import atomic
 
 from django_form_generator import const
 from django_form_generator.common.admins import FormFilter, AdminMixin
+from django_form_generator.common.utils import FilterMixin
 from django_form_generator.forms import FieldForm, FormAdminForm, FormResponseFilterForm, ValidatorAdminForm
 from django_form_generator.models import (
     FieldCategory,
@@ -29,92 +30,31 @@ from django_form_generator.models import (
 
 
 
-class FormResponseFilter(FormFilter):
+class FormResponseFilter(FilterMixin, FormFilter):
 
     template = "django_form_generator/filters/form_response_filter.html"
     form_class = FormResponseFilterForm
 
-    def _create_related_fields_lookup(self, q, form, current_field_id, fields, texts, *, similar_field_index=None):
-        related_fields = form.fields.filter(object_id=current_field_id, content_type__model='field', id__in=fields)
-        for field in related_fields:
-            try:
-                if similar_field_index is not None:
-                    index = fields.index(field.id)
-                    query_index = similar_field_index + 1
-                else:
-                    query_index = index = fields.index(field.id)
-                value = int(texts[query_index]) if texts[query_index].isdigit() else texts[query_index]
-                if isinstance(value, int):
-                    self._combine(q, models.Q(**{f"{self.field_path}__{index}__value": value}), models.Q.AND, q)
-                else:
-                    self._combine(q, models.Q(**{f"{self.field_path}__{index}__value__regex": value}), models.Q.AND, q)
-            except IndexError:
-                ...
-        return q
+    def get_parameters(self, request) -> tuple[str, list[str], list[str], list[str], list[str]]:
+        form_id: str = request.GET.get(f'{self.field.name}-form_id')
+        field_ids: list[str] = self.clean_parameters(request.GET.getlist(f'{self.field.name}-field'))
+        field_lookups: list[str] = self.clean_parameters(request.GET.getlist(f'{self.field.name}-field_lookup'))
+        operands: list[str] = self.clean_parameters(request.GET.getlist(f'{self.field.name}-operand'))
+        values: list[str] = self.clean_parameters(request.GET.getlist(f'{self.field.name}-value'))
+        return form_id ,field_ids ,field_lookups ,operands ,values
 
-    def clean_parameters(self, item):
-        return list(filter(lambda x: x != '', item))
-
-    def _combine(self, lookup, inner, operand, final_lookup):
-        for r in inner.children:
-            if str(r) not in str(final_lookup) and str(r) not in str(lookup):
-                lookup.add(inner, operand)
-            
-
-    def get_lookups(self):
-        lookup = models.Q()
-        no_result = False
-        fields_text = self.clean_parameters(self.request.GET.getlist(f'{self.field.name}-text'))
-        fields_id = self.clean_parameters(self.request.GET.getlist(f'{self.field.name}-field'))
-        fields_operand = self.clean_parameters(self.request.GET.getlist(f'{self.field.name}-operand'))
-        form_id = self.request.GET.get(f'{self.field.name}-form_id')
-        if form_id:
-            form = Form.objects.prefetch_related('fields').get(id=int(form_id))
-            form_fields_list = list(form.get_fields().values_list('id', flat=True))
-            for i in range(len(fields_text)):
-                field_id = int(fields_id[i])
-                field_value = int(fields_text[i]) if fields_text[i].isdigit() else fields_text[i]
-                current_operand = getattr(models.Q, fields_operand[i], models.Q.AND)
-                if isinstance(field_value, int):
-                    lookup_content = "{0}__{1}__value"
-                else:
-                    lookup_content = "{0}__{1}__value__regex"
-                try:
-                    index = form_fields_list.index(field_id)
-                    inner_lookup = models.Q(**{lookup_content.format(self.field_path, index): field_value})
-                    self._create_related_fields_lookup(inner_lookup, form, field_id, fields_id, fields_text)
-                    self._combine(lookup, inner_lookup, current_operand, lookup)
-                except ValueError:
-                    # searching on similar fields (same names with number postfix)
-                    inner_lookup = models.Q()
-                    current_field = Field.objects.get(id=field_id)
-                    similar_fields = form.fields.filter(name__startswith=current_field.name).exclude(pk=current_field.pk).order_by('name')
-                    if similar_fields.exists():
-                        for field_ in similar_fields:
-                            try:
-                                index = form_fields_list.index(field_.pk)
-                                related_lookup = models.Q(**{lookup_content.format(self.field_path, index): field_value})
-                                self._create_related_fields_lookup(related_lookup, form, field_.pk, form_fields_list, fields_text, similar_field_index=fields_id.index(str(current_field.pk)))
-                                self._combine(inner_lookup, related_lookup, models.Q.OR, lookup)
-                            except IndexError:
-                                ...
-                        self._combine(lookup, inner_lookup, current_operand, lookup)
-                    else:
-                        no_result = True
-        elif len(fields_id) > 0 and fields_id[0] != '':
-            messages.error(self.request, _("First select a form"))
-        if no_result:
-            return {'id': 0}
-        return lookup
-
+    def queryset(self, request, queryset):
+        response_filters, response_annotations = self.get_lookups(request)
+        return queryset.alias(**response_annotations).filter(response_filters)
 
     def form_lookups(self):
         name = self.field.name
         return (
             ("%s-form_id" % name, "%s__exact" % name),
-            ("%s-field" % name, "%s__contains" % name),
-            ("%s-text" % name, "%s__contains" % name),
-            ("%s-operand" % name, "%s__contains" % name),
+            ("%s-field" % name, "%s__exact" % name),
+            ("%s-field_lookup" % name, "%s__exact" % name),
+            ("%s-operand" % name, "%s__exact" % name),
+            ("%s-value" % name, "%s__icontains" % name),
         )
 
 
@@ -232,7 +172,7 @@ class FormResponseAdmin(AdminMixin, admin.ModelAdmin):
     list_display = ["id", "get_form_title", "user_ip", "show_response"]
     list_display_links = ["id", "get_form_title"]
     list_filter = [('data', FormResponseFilter)]
-    search_fields = ['form__title', 'form__slug']
+    search_fields = ['form__title', 'form__slug', 'unique_id']
     readonly_fields = ['id', 'unique_id', 'created_at', 'updated_at']
     extra_views = [('fetch_options', 'options/<int:field_id>')]
 

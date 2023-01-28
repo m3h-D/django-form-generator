@@ -2,7 +2,7 @@
 {% load crispy_forms_tags %}
 <link rel="stylesheet" href="/static/admin/css/forms.css">
 <div class="fields-filter d-flex flex-row">
-<form action="" method="get">
+<form id="form_generator_filter_" action="" method="get">
     {{ spec.form.non_field_errors }}
 
     {% for hidden_field in spec.form.hidden_fields %}
@@ -16,14 +16,11 @@
                     <div>   
                         <input type="text" name="data-form_id" id="form_id" class="vForeignKeyRawIdAdminField" placeholder="Select a form">
                         <a href="{% url 'admin:django_form_generator_form_changelist' %}?_to_field=id" class="related-lookup" id="lookup_form_id" title="Lookup"></a>
-                        <div class="help" id="id_field" style="margin-left: 0%;">
-                            You can use regex on value field
-                        </div>
                     </div>
                 </div>
             </fieldset>
             <fieldset class="form_fields module aligned">
-                <div class="form-row field-operand field-field field-text">
+                <div class="form-row field-operand field-field field-text field-lookup">
                     {% for field in spec.form.visible_fields %}
                     <div class="fieldBox field-{{field.name}}{% if field.errors %} error{% endif %}">
                         {{field.label}}: 
@@ -40,7 +37,7 @@
         </div>
         <div class="add-row submit-row">
             <input id="rowAdder" type="button" class="addlink" value="Add">
-            <input id="rowAdder" type="submit" class="addlink" value="submit">
+            <input id="form-generator-filter-submit" type="submit" class="addlink" value="submit">
         </div>
         <a class="button" href="?{{ spec.other_query_string }}">{% trans 'Clear' %}</a>
     </div>
@@ -58,20 +55,42 @@
     }
 
     function rowAdder(item){
-        var aa = document.querySelector('.form_fields').cloneNode(true)
+        const fieldSet = document.createElement('fieldset')
+        fieldSet.classList.add('form_fields', 'module', 'aligned')
+        const div = document.createElement('div')
+        div.classList.add("form-row", "field-operand", "field-field", "field-text", "field-lookup")
+        div.innerHTML = `
+        {% for field in spec.form.visible_fields %}
+                    <div class="fieldBox field-{{field.name}}{% if field.errors %} error{% endif %}">
+                        {{field.label}}: 
+                        {{ field }}
+                        <div class="help" id="id_field" style="margin-left: 0%;">
+                            {{ field.help_text }}
+                        </div>
+                    </div>
+        {% endfor %}
+        <input type="button" class=" btn btn-danger remove-row" value="Remove" onclick="rowRemover(event)">
+        `
+        fieldSet.append(div);
+        var aa = fieldSet;
         Object.entries(item).forEach(([key, value]) => {
             if (key == 'data-operand'){
                 aa.children[0].children[0].children[0].value = value;
             }
             else if (key == 'data-field')
                 aa.children[0].children[1].children[0].value = value;
-            else if (key == 'data-text')
+            else if (key == 'data-field_lookup')
                 aa.children[0].children[2].children[0].value = value;
+            else if (key == 'data-value'){
+                aa.children[0].children[3].children[0].value = value;
+                valueField(aa.children[0].children[1].children[0], item_value=value);
+            }
             else
             {
                 // aa.children[0].children[0].children[0].value = null;
                 aa.children[0].children[1].children[0].value = null;
                 aa.children[0].children[2].children[0].value = null;
+                aa.children[0].children[3].children[0].value = null;
             };
             aa.children[0].children[0].removeAttribute('hidden');
             document.querySelector('.added-form-group').append(aa);
@@ -91,7 +110,11 @@
             }
             else if ((key == 'data-field')){
                 x[key] =  item;
-            }else if (key == 'data-text'){
+            }
+            else if ((key == 'data-field_lookup')){
+                x[key] =  item;
+            }
+            else if (key == 'data-value'){
                 x[key] = item
                 ds.push(x)
                 x = new Object();
@@ -101,13 +124,23 @@
             rowAdder(ds[i]);
         };
         var elements = document.querySelectorAll('.form_fields');
-
-        while(elements.length > 1){
+        try {
+            while(elements.length > 1){
             elements[0].parentNode.removeChild(elements[0]);
         };
+        } catch (error) {
+            
+        }
+
     };
-    function valueField(e){
-        const url = "{% url 'admin:django_form_generator_formresponse_fetch_options' 0 %}".replace('0', e.target.value);
+
+    function valueField(e, item_value=null){
+        try {
+            value = e.target.value;
+        } catch (error) {
+            value = e.value;
+        }
+        const url = "{% url 'admin:django_form_generator_formresponse_fetch_options' 0 %}".replace('0', value);
         fetch(url, {
             method: "GET",
             headers: {
@@ -116,40 +149,167 @@
         })
         .then(response => response.json())
         .then(data => {
-                var x = e.target.parentNode.nextElementSibling;
+                try {
+                    var x = e.target.parentNode.nextElementSibling.nextElementSibling;
+                    var lookupElement = e.target.parentNode.nextElementSibling.getElementsByTagName('select')[0];
+                } catch (error) {
+                    var x = e.parentNode.nextElementSibling.nextElementSibling;
+                    var lookupElement = e.parentNode.nextElementSibling.getElementsByTagName('select')[0];
+                }
+               
                 let children = new Array();
                 for (let i = 0; i < x.children.length; i++) {
                     children.push(x.children[i]);
                 }
                 if (data.length > 0){
-                    var select = document.createElement("select");
-                    for (let i = 0; i < data.length; i++) {
-                        const element = data[i];
-                        var optionElement = document.createElement("option");
-                        optionElement.value = `[${element.id}]`;
-                        optionElement.text = element.name;
-                        select.appendChild(optionElement);
-                        select.name = "data-text";
-                        select.setAttribute('id', 'id_data-text');
-                    };
-                    console.log(children.length);
-                    for (let j = 0; j < children.length; j++) {
-                        x.children[0].remove();
-                    };
-                    x.append(select);
-                }else{
-                    var input = document.createElement("input")
-                    input.name = 'data-text';
-                    input.setAttribute('type', 'text');
-                    input.setAttribute('placeholder', 'response value');
-                    input.setAttribute('id', 'id_data-text');
-                    console.log(children);
+                    const ignoreOptions = ['iregex', 'isnull']
+                    for (let i = 0; i < lookupElement.children.length; i++) {
+                        const element = lookupElement.children[i];
+                        if (!ignoreOptions.includes(element.value))
+                        element.setAttribute('hidden', true)
+                    }
+                    if (lookupElement.value == 'isnull'){
+                        var select = createIsNull(item_value)
+                    }else{
+                        var select = document.createElement("select");
 
+                        for (let i = 0; i < data.length; i++) {
+                            const element = data[i];
+                            var optionElement = document.createElement("option");
+                            optionElement.value = `(?<!\\d)${element.id}(?!\\d)`;
+
+                            if (item_value == optionElement.value)
+                                optionElement.selected = true;
+
+                            optionElement.text = element.name;
+                            select.appendChild(optionElement);
+                        };
+                    }
+                    select.name = "data-value";
+                    select.setAttribute('id', 'id_data-value');
                     for (let j = 0; j < children.length; j++) {
                         x.children[0].remove();
                     };
-                    x.append(input);
-                }
+                    x.insertBefore(select, x.children[x.children.length-1]);
+                }else{
+                    for (let i = 0; i < lookupElement.children.length; i++) {
+                        const element = lookupElement.children[i];
+                        element.removeAttribute('hidden')
+                    }
+                    for (let j = 0; j < children.length; j++) {
+                        x.children[0].remove();
+                    };
+                    if (lookupElement.value == 'range'){
+                        var val1 = null;
+                        var val2 = null;
+                        try {
+                            var newVal = JSON.parse(item_value)
+                            val1 = newVal[0];
+                            val2 = newVal[1];
+                            
+                        } catch (error) {}
+
+                        var div = createRange(val1, val2);
+                        x.insertBefore(div, x.children[x.children.length-1]);
+                    }else if (lookupElement.value == 'isnull') {
+                        var input = createIsNull(item_value);
+                        x.insertBefore(input, x.children[x.children.length-1])
+                    }else{
+                        var input = createOtherInput(item_value);
+                        x.insertBefore(input, x.children[x.children.length-1]);
+                    };
+                };
             });
+    };
+    function createRange(value1=null, value2=null){
+        var div = document.createElement("div");
+        div.classList.add("range_input_group", "input-group");
+        div.setAttribute("id", "result_range");
+        var input1 = document.createElement("input");
+        var input2 = document.createElement("input");
+        var input3 = document.createElement("input");
+        input1.setAttribute("type", "number");
+        input2.setAttribute("type", "number");
+        input3.setAttribute("type", "hidden");
+        input1.setAttribute("id", "id_data-value1");
+        input1.setAttribute("form","nosubmit");
+        input2.setAttribute("id", "id_data-value2");
+        input2.setAttribute("form","nosubmit");
+        input1.name = 'xdata-value1';
+        input2.name = 'xdata-value2';
+        input3.name = 'data-value';
+        input1.style.width = '70px';
+        input2.style.width = '70px';
+        input1.onchange = changeRangeHiddenInput
+        input2.onchange = changeRangeHiddenInput
+        if (value1)
+            input1.setAttribute('value', value1);
+        if (value2)
+            input2.setAttribute('value', value2);
+        if (value1 && value2)
+            input3.setAttribute('value', `[${value1}, ${value2}]`)
+        div.appendChild(input1);
+        div.appendChild(input2);
+        div.appendChild(input3);
+        return div
+    };
+
+    function createIsNull(value=null){
+        var select = document.createElement("select");
+        var optionYes = document.createElement("option");
+        optionYes.value = 'True';
+        optionYes.text = 'True';
+        select.appendChild(optionYes);
+        var optionNo = document.createElement("option");
+        optionNo.value = 'False';
+        optionNo.text = 'False';
+        if (value == "True")
+            optionYes.selected = true;
+        else
+            optionNo.selected = true;
+        select.appendChild(optionNo);
+        select.name = "data-value";
+        select.setAttribute('id', 'id_data-value');
+        select.style.width = "100px";
+        if (value)
+            select.setAttribute('value', value);
+        return select;
+        };
+        
+    function createOtherInput(value=null){
+        var input = document.createElement("input")
+        input.setAttribute("type", "text")
+        input.setAttribute("id", "id_data-value")
+        input.name = 'data-value';
+        if (value)
+            input.setAttribute('value', value);
+        return input;
+    };
+
+    function changeRangeHiddenInput(e){
+        var parentChildren = e.target.parentNode.children;
+        if (parentChildren[0].value == "" || parentChildren[1].value == "")
+            parentChildren[2].value = null
+        else
+            parentChildren[2].value = `[${parentChildren[0].value}, ${parentChildren[1].value}]`
+    }
+
+    function typeField(e){
+        var value = null;
+        var x = e.target.parentNode.nextElementSibling;
+        for (let i = 0; i < x.children.length; i++) {
+            const element = x.children[i];
+            if (element.tagName == 'DIV')
+                value = element.children[2].value
+            else
+                value = element.value;
+            if (element.tagName == 'INPUT' || element.tagName == 'DIV' || element.tagName == 'SELECT'){
+                element.remove();
+            }
+            
+        };
+        valueField(e.target.parentNode.previousElementSibling.children[0], value)
+
+
     };
 </script>
