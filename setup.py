@@ -11,7 +11,8 @@ if "-" in remote_version:
     v,i,s = remote_version.split("-")
     remote_version = v + "+" + i + ".git." + s
 
+with open(r'./django_form_generator/__version__.py', 'w', encoding="utf-8") as f:
+    f.write(f"__version__ = '{remote_version}'")
 
-setup(
-    version=remote_version
-)
+
+setup()
