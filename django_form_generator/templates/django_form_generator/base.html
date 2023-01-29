@@ -51,9 +51,9 @@
         return addRowBtn;
       };
 
-      function createRemoveRowBtn(clonedDiv){
-        if (clonedDiv.children.length == 4){
-          clonedDiv.children[3].onclick = removeRow;
+      function createRemoveRowBtn(clonedDiv=null){
+        if (clonedDiv != null && clonedDiv.querySelector('.removeRowBtn') != null){
+          clonedDiv.querySelector('.removeRowBtn').onclick = removeRow;
           return null;
         }
         var removeRowBtn = document.createElement("button");
@@ -73,29 +73,27 @@
 
 
       function addRow(e, value=null){
-        var firstInput = document.querySelectorAll('[multi-input]');
-        var clonedDiv = firstInput[0].parentNode.cloneNode(true);
-        clonedDiv.children[1].value = value;
-        clonedDiv.children[2].onclick = addRow;
+        var element = e;
+        if ('target' in e || e.hasAttribute('target'))
+            element = e.target;
+
+        var clonedDiv = element.parentNode.cloneNode(true);
+        clonedDiv.querySelector('input').value = value;
+        clonedDiv.querySelector('.addRowBtn').onclick = addRow;
         var removeRowBtn = createRemoveRowBtn(clonedDiv)
         if (removeRowBtn){
           clonedDiv.append(removeRowBtn);
         }
-
-        try {
-          e.target.parentNode.parentNode.append(clonedDiv);
-        } catch (error) {
-          e.parentNode.parentNode.append(clonedDiv)
-        }
-        
+        element.parentNode.parentNode.append(clonedDiv)
+        return clonedDiv;
       };
 
       multiInputs.forEach(element => {
-          if (multiInputsArray.indexOf(element) != 0){
-            element.parentNode.append(createRemoveRowBtn());
-          }
           element.parentNode.classList.add('input-group');
+          element.parentNode.setAttribute('id', element.getAttribute('id')+ '___' + multiInputsArray.indexOf(element));
           element.parentNode.append(createAddRowBtn());
+          if (!element.required)
+            element.parentNode.append(createRemoveRowBtn());
       });
 
 
