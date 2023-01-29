@@ -31,7 +31,7 @@ jobs:
         python3 -m pip install --upgrade pip
         pip3 install build
     - name: Build package
-      run: python3 -m build
+      run: python3 -m build -s -w
     - name: Publish distribution 📦 to Test PyPI
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
       with:
