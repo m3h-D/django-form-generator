@@ -216,7 +216,8 @@ class Form(BaseModel):
                     "parent_content_type": getattr(field.content_type, "model", None),
                     "placeholder": field.placeholder,
                     "position": form_field_through.position,
-                    "options": field.get_choices().values('id', 'name')
+                    "options": field.get_choices().values('id', 'name'),
+                    "validators": [{'code': validator.code, 'limit_value': validator.limit_value, 'message': validator.message} for validator in attrs.get('validators',[])]
                 })
             data.append({
                     "id": field.id,
