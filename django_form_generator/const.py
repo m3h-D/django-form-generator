@@ -227,14 +227,14 @@ class CacheMethod(TextChoices):
     USER_IP = 'user_ip', _('User IP')
 
 class FieldLookupType(TextChoices):
-    ICONTAINS = 'icontains', 'Contains'
-    IEXACT = 'iexact', 'Exact'
-    ISNULL = 'isnull', 'Is null'
-    IREGEX = 'iregex', 'Regex'
-    RANGE = 'range', 'Range'
-    IN = 'in', 'In'
-    NOT_ICONTAINS = 'not_icontains', 'Not contains'
-    NOT_IEXACT = 'not_iexact', 'Not exact'
-    NOT_IREGEX = 'not_iregex', 'Not regex'
-    NOT_RANGE = 'not_range', 'Not range'
-    NOT_IN = 'not_in', 'Not in'
+    ICONTAINS = 'icontains', _('Contains')
+    IEXACT = 'iexact', _('Exact')
+    ISNULL = 'isnull', _('Is null')
+    IREGEX = 'iregex', _('Regex')
+    RANGE = 'range', _('Range')
+    IN = 'in', _('In')
+    NOT_ICONTAINS = 'not_icontains', _('Not contains')
+    NOT_IEXACT = 'not_iexact', _('Not exact')
+    NOT_IREGEX = 'not_iregex', _('Not regex')
+    NOT_RANGE = 'not_range', _('Not range')
+    NOT_IN = 'not_in', _('Not in')

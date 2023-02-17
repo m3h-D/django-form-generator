@@ -89,12 +89,26 @@
       };
 
       multiInputs.forEach(element => {
-          element.parentNode.classList.add('input-group');
-          element.parentNode.setAttribute('id', element.getAttribute('id')+ '___' + multiInputsArray.indexOf(element));
-          element.parentNode.append(createAddRowBtn());
-          if (!element.required)
-            element.parentNode.append(createRemoveRowBtn());
-      });
+        element.parentNode.classList.add('input-group');
+        try {
+          var helpText = element.parentNode.querySelector('small')
+          element.parentNode.querySelector('small').remove();
+          var div = document.createElement('div')
+          div.append(helpText)
+          element.parentNode.parentNode.prepend(div);
+        } catch (error) {}
+        
+
+        var label = element.parentNode.querySelector('label')
+        element.parentNode.querySelector('label').remove();
+        element.parentNode.parentNode.prepend(label);
+
+
+        element.parentNode.setAttribute('id', element.getAttribute('id')+ '___' + multiInputsArray.indexOf(element));
+        element.parentNode.append(createAddRowBtn());
+        if (!element.required)
+          element.parentNode.append(createRemoveRowBtn());
+    });
 
 
     </script>
