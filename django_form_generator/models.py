@@ -418,8 +418,10 @@ class FieldValidator(BaseModel):
     is_active = models.BooleanField(_("Is Active"), default=True)
 
     class Meta:
-        unique_together = [
-            ('field', 'validator')
+        constraints = [
+            models.UniqueConstraint(fields=['field', 'validator'],
+                name='field_validator_unique',
+            ),
         ]
     
     def __str__(self):

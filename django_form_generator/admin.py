@@ -25,10 +25,6 @@ from django_form_generator.models import (
     FormAPIManager,
 )
 
-# Register your models here.
-
-
-
 
 class FormResponseFilter(FilterMixin, FormFilter):
 
@@ -81,6 +77,7 @@ class FormAdmin(admin.ModelAdmin):
     list_editable = ['status']
     list_filter = ['status', 'created_at']
     search_fields = ['title', 'slug']
+    search_help_text = 'Search on Title & Slug'
     readonly_fields = ['id', 'created_at', 'updated_at']
     inlines = [FormFieldThroughInlineAdmin, FormAPIThroughInlineAdmin]
     form = FormAdminForm
@@ -142,11 +139,12 @@ class FieldValidatorThroughInlineAdmin(admin.TabularInline):
 
 @admin.register(Field)
 class FieldAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'genre', 'is_active', 'created_at', 'updated_at']
+    list_display = ['id', 'name', 'genre', 'is_active', 'is_required', 'read_only', 'write_only', 'created_at', 'updated_at']
     list_display_links = ['id', 'name']
-    list_editable = ['is_active']
-    list_filter = ['is_active', 'created_at', 'genre']
+    list_editable = ['is_active', 'is_required']
+    list_filter = ['is_active', 'is_required', 'read_only', 'write_only', 'created_at', 'genre']
     search_fields = ['label', 'name', 'forms__title']
+    search_help_text = 'Search on Label & Name & Form title'
     inlines = [FieldOptionThroughInlineAdmin, FieldValidatorThroughInlineAdmin]
     readonly_fields = ['id', 'created_at', 'updated_at']
     form = FieldForm
@@ -173,6 +171,7 @@ class FormResponseAdmin(AdminMixin, admin.ModelAdmin):
     list_display_links = ["id", "get_form_title"]
     list_filter = [('data', FormResponseFilter)]
     search_fields = ['form__title', 'form__slug', 'unique_id']
+    search_help_text = 'Search on Form title & Form slug & unique_id'
     readonly_fields = ['id', 'unique_id', 'created_at', 'updated_at']
     extra_views = [('fetch_options', 'options/<int:field_id>')]
 
@@ -195,11 +194,12 @@ class FormResponseAdmin(AdminMixin, admin.ModelAdmin):
 
 @admin.register(FormAPIManager)
 class FormAPIManagerAdmin(admin.ModelAdmin):
-    list_display = ["id", "title", "method", "execute_time", "is_active", "created_at", "updated_at"]
+    list_display = ["id", "title", "method", "execute_time", "is_active", "cache_by", "created_at", "updated_at"]
     list_display_links = ["id", "title"]
     list_filter = ['is_active', 'created_at', 'execute_time', 'method']
     list_editable = ['is_active']
     search_fields = ['title', 'forms__title', 'forms__slug']
+    search_help_text = 'Search on Title & Form title & Form slug'
     readonly_fields = ['id', 'created_at', 'updated_at']
 
 
@@ -210,6 +210,7 @@ class FieldCategoryAdmin(admin.ModelAdmin):
     list_filter = ['is_active', 'created_at', ('parent', admin.filters.EmptyFieldListFilter)]
     list_editable = ['is_active']
     search_fields = ['title']
+    search_help_text = 'Search on Title'
     readonly_fields = ['id', 'created_at', 'updated_at']
 
 
@@ -220,5 +221,6 @@ class OptionAdmin(admin.ModelAdmin):
     list_filter = ['is_active', 'created_at']
     list_editable = ['is_active']
     search_fields = ['name', 'fields__name', 'fields__label']
+    search_help_text = 'Search on Name & Field name & Field label'
     readonly_fields = ['id', 'created_at', 'updated_at']
 
