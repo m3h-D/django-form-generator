@@ -114,6 +114,7 @@ class BaseFormSerializer(serializers.Serializer):
 
     def prepare_hidden(self, field: Field):
         field_attrs: dict = field.build_serializer_attrs()
+        field_attrs.update({'default': field_attrs.get('initial', None)})
         return serializers.HiddenField(**field_attrs)
 
     def prepare_captcha(self, field: Field):

@@ -37,7 +37,7 @@ class FieldGenre(TextChoices):
 
     @classmethod
     def selectable_fields(cls):
-        return [cls.DROPDOWN, cls.CHECKBOX, cls.RADIO, cls.MULTI_CHECKBOX]
+        return [cls.DROPDOWN, cls.RADIO, cls.MULTI_CHECKBOX]
 
     def evaluate(self, value, **kwargs):
         return getattr(self, "eval_" + self.name.lower())(value, **kwargs)
