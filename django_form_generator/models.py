@@ -208,7 +208,7 @@ class Form(BaseModel):
         data = []
         for field in self.get_fields():
             field: "Field"
-            form_field_through = self.form_field_through.filter(form_id=self.id).last()  # type: ignore
+            form_field_through = self.form_field_through.filter(field_id=field.id).last()  # type: ignore
             attrs = field.build_serializer_attrs()
             attrs.update(
                 {
