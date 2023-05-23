@@ -1,228 +1,205 @@
 {% load i18n static %}
 {% load crispy_forms_tags %}
+{% load django_form_generator %}
 <link rel="stylesheet" href="/static/admin/css/forms.css">
 <div class="fields-filter d-flex flex-row">
-<form id="form_generator_filter_" action="" method="get">
-    {{ spec.form.non_field_errors }}
+    <h2>{{ title }}</h2>
+    <form id="form_generator_filter_" method="get" action="" class="form-row">
+        {{ spec.form.non_field_errors }}
 
-    {% for hidden_field in spec.form.hidden_fields %}
-    {{ hidden_field.errors }}
-    {{ hidden_field }}
-    {% endfor %}
-    <div class="search-field-section d-flex flex-row mx-2">
-        <div class="d-flex flex-column">
-            <fieldset class="module aligned">
-                <div class="form-row field-form">
-                    <div>   
-                        <input type="text" name="data-form_id" id="form_id" class="vForeignKeyRawIdAdminField" placeholder="Select a form">
-                        <a href="{% url 'admin:django_form_generator_form_changelist' %}?_to_field=id" class="related-lookup" id="lookup_form_id" title="Lookup"></a>
-                    </div>
-                </div>
-            </fieldset>
-            <fieldset class="form_fields module aligned">
-                <div class="form-row field-operand field-field field-text field-lookup">
-                    {% for field in spec.form.visible_fields %}
-                    <div class="fieldBox field-{{field.name}}{% if field.errors %} error{% endif %}">
-                        {{field.label}}: 
-                        {{ field }}
-                        <div class="help" id="id_field" style="margin-left: 0%;">
-                            {{ field.help_text }}
+        {% for hidden_field in spec.form.hidden_fields %}
+        {{ hidden_field.errors }}
+        {{ hidden_field }}
+        {% endfor %}
+        <div class="search-field-section d-flex flex-row mx-2">
+            <div class="d-flex flex-column">
+                <fieldset class="module aligned">
+                    <div class="form-row field-form">
+                        <div>
+                            <input type="text" name="data-form_id" id="form_id" class="vForeignKeyRawIdAdminField"
+                            placeholder="Enter a form ID">
+                            <a href="{% url 'admin:django_form_generator_form_changelist' %}?_to_field=id"
+                            class="related-lookup" id="lookup_form_id" title="Lookup"></a>
                         </div>
                     </div>
-                    {% endfor %}
-                    <input type="button" class=" btn btn-danger remove-row" value="Remove" onclick="rowRemover(event)">
+                </fieldset>
+                <fieldset id="form-0" class="form_fields module aligned">
+                    {{spec.form|clear_form}}
+                    <input type="button" class="remove-form" value="Remove" onclick="removeButton(event)" />
+                </fieldset>
+                <div class="add-row submit-row">
+                    <input type="button" class="add-form" value="Add" />
+                    <input type="submit" value="Filter">
                 </div>
-            </fieldset>
-            <div id="added-form-group" class="added-form-group search-form"></div>
+            </div>
         </div>
-        <div class="add-row submit-row">
-            <input id="rowAdder" type="button" class="addlink" value="Add">
-            <input id="form-generator-filter-submit" type="submit" class="addlink" value="submit">
-        </div>
-        <a class="button" href="?{{ spec.other_query_string }}">{% trans 'Clear' %}</a>
-    </div>
-</form>
+    </form>
+
+
 </div>
 
 <script type="text/javascript">
-    document.getElementById('rowAdder').addEventListener('click', rowAdder);
-    document.onload =  createFields();
-    document.querySelectorAll('.fieldBox.field-operand')[0].setAttribute('hidden', true)
-    // document.querySelectorAll('.remove-row')[0].setAttribute('hidden', true)
-    
-    function rowRemover(event){
-        event.target.parentNode.parentNode.remove();
+    const formsetWrapper = document.querySelector('.formset');
+    const addButton = document.querySelector('.add-form');
+    document.getElementsByName('data-operand')[0].parentNode.setAttribute('hidden', true)
+    const clickEvent = new CustomEvent('clickEvent');
+    let prevData = null
+
+    async function fillData(item, fieldset){
+        
+        Object.entries(item).forEach(([key, value]) => {
+            var formField = fieldset.querySelector(`select[name="${key}"]`)
+            if (formField != null){
+                if (key == 'data-field')
+                    fetchFormFields(document.getElementById('form_id').value, value, fieldset)
+                formField.value = value
+            }else if (key == 'data-value'){
+                fieldset.querySelector(`input[name="${key}"]`).value = value
+                valueField(fieldset.querySelector('select[name="data-field"]'), value);
+            }else{
+                formField.value = null;
+            }
+            fieldset.children[0].removeAttribute('hidden');
+        });
     }
 
-    function rowAdder(item){
-        const fieldSet = document.createElement('fieldset')
-        fieldSet.classList.add('form_fields', 'module', 'aligned')
-        const div = document.createElement('div')
-        div.classList.add("form-row", "field-operand", "field-field", "field-text", "field-lookup")
-        div.innerHTML = `
-        {% for field in spec.form.visible_fields %}
-                    <div class="fieldBox field-{{field.name}}{% if field.errors %} error{% endif %}">
-                        {{field.label}}: 
-                        {{ field }}
-                        <div class="help" id="id_field" style="margin-left: 0%;">
-                            {{ field.help_text }}
-                        </div>
-                    </div>
-        {% endfor %}
-        <input type="button" class=" btn btn-danger remove-row" value="Remove" onclick="rowRemover(event)">
-        `
-        fieldSet.append(div);
-        var aa = fieldSet;
-        Object.entries(item).forEach(([key, value]) => {
-            if (key == 'data-operand'){
-                aa.children[0].children[0].children[0].value = value;
+    async function createFormset(event){
+            event.preventDefault();
+            var allForms = document.querySelectorAll('.form_fields');
+            const newFieldset = document.createElement('fieldset');
+            newFieldset.id = 'form-' + (parseInt(allForms[allForms.length - 1].id.split('-')[1]) + 1)
+            newFieldset.classList.add('form_fields', 'module', 'aligned');
+            newFieldset.innerHTML = `{{spec.form|clear_form}}
+                                    <input type="button" class="remove-form" value="Remove" onclick="removeButton(event)" />`
+            document.querySelector('.submit-row').parentNode.insertBefore(newFieldset, document.querySelector('.submit-row'));
+            if (event.type == 'click')
+                await fetchFormFields(document.getElementById('form_id').value)
+            if (event.detail.item !== undefined){
+                fillData(event.detail.item, newFieldset);
             }
-            else if (key == 'data-field')
-                aa.children[0].children[1].children[0].value = value;
-            else if (key == 'data-field_lookup')
-                aa.children[0].children[2].children[0].value = value;
-            else if (key == 'data-value'){
-                aa.children[0].children[3].children[0].value = value;
-                valueField(aa.children[0].children[1].children[0], item_value=value);
-            }
-            else
-            {
-                // aa.children[0].children[0].children[0].value = null;
-                aa.children[0].children[1].children[0].value = null;
-                aa.children[0].children[2].children[0].value = null;
-                aa.children[0].children[3].children[0].value = null;
-            };
-            aa.children[0].children[0].removeAttribute('hidden');
-            document.querySelector('.added-form-group').append(aa);
-        });
-    };
+    }
 
-    function createFields(){
+    'clickEvent click'.split(" ").forEach(function(e){
+        addButton.addEventListener(e, (event) => createFormset(event), false);
+    })
+
+    async function fetchFormFields(formId, value=null, fieldset=null){
+        const url = "{% url 'admin:django_form_generator_formresponse_fetch_fields' 0 %}".replace('0', formId);
+        await fetch(url, {
+            method: "GET",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0){
+                    try {
+                        if (fieldset != null){
+                            var [elem, label] = createSelectField(data, value)
+                            fieldset.setAttribute('haschanged', true)
+
+                            fieldset.querySelector('select[name="data-field"]').parentNode.replaceChildren(label, elem)
+                        }else{
+                            var node = document.querySelectorAll('fieldset.form_fields:not([haschanged]')[0]
+                            while ( node ) {
+                                if (node != null && node.querySelector('select[name="data-field"]') != null &&
+                                                    !node.querySelector('select[name="data-field"]').hasAttribute("haschanged")){
+                                    var [elem, label] = createSelectField(data)
+                                    node.setAttribute('haschanged', true)
+                                    node.querySelector('select[name="data-field"]').parentNode.replaceChildren(label, elem)
+                                    node = node.nextElementSibling;
+                                }else{
+                                    break
+                                }
+                            }
+                        }
+                        
+                    } catch (error) {
+                        console.log(error);
+                    }
+                }
+
+
+            });
+
+    }
+
+    function createFields() {
         const params = new URLSearchParams(window.location.search);
         var formId = params.get('data-form_id')
         if (formId)
             document.getElementById('form_id').setAttribute('value', formId)
+
         var ds = new Array();
         var x = new Object();
-        params.forEach(function (item, key){
-            if (key == 'data-operand'){
+        params.forEach(function (item, key) {
+            if (key == 'data-operand') {
                 x[key] = item
             }
-            else if ((key == 'data-field')){
-                x[key] =  item;
+            else if ((key == 'data-field')) {
+                x[key] = item;
+
             }
-            else if ((key == 'data-field_lookup')){
-                x[key] =  item;
+            else if ((key == 'data-field_lookup')) {
+                x[key] = item;
             }
-            else if (key == 'data-value'){
+            else if (key == 'data-value') {
                 x[key] = item
                 ds.push(x)
                 x = new Object();
             }
         });
         for (let i = 0; i < ds.length; i++) {
-            rowAdder(ds[i]);
+            clickEvent.initCustomEvent('clickEvent', false, false, {item: ds[i]})
+            clickEvent.detail = {"item": ds[i]}
+            addButton.dispatchEvent(clickEvent)
         };
         var elements = document.querySelectorAll('.form_fields');
         try {
-            while(elements.length > 1){
-            elements[0].parentNode.removeChild(elements[0]);
-        };
+            while (elements.length > 1) {
+                elements[0].parentNode.removeChild(elements[0]);
+            };
         } catch (error) {
+
+        }
+
+    };
+
+    document.onload = createFields();
+
+
+    document.getElementById('lookup_form_id').addEventListener('focus', (event) => {
+        document.querySelectorAll('*[haschanged=true]').forEach(p =>
+        p.removeAttribute('haschanged')
+        )
+        fetchFormFields(event.target.previousElementSibling.value)
+        event.preventDefault();
+        
+    })
+    
+
+    document.getElementById('form_id').addEventListener('change', (event) => {
+        if (event.target.value != null){
+            document.querySelectorAll('*[haschanged=true]').forEach(p =>
+            p.removeAttribute('haschanged')
+            )
+                fetchFormFields(event.target.value)
+        }
+        event.preventDefault();
             
-        }
-
-    };
-
-    function valueField(e, item_value=null){
-        try {
-            value = e.target.value;
-        } catch (error) {
-            value = e.value;
-        }
-        const url = "{% url 'admin:django_form_generator_formresponse_fetch_options' 0 %}".replace('0', value);
-        fetch(url, {
-            method: "GET",
-            headers: {
-                "X-Requested-With": "XMLHttpRequest",
-            }
         })
-        .then(response => response.json())
-        .then(data => {
-                try {
-                    var x = e.target.parentNode.nextElementSibling.nextElementSibling;
-                    var lookupElement = e.target.parentNode.nextElementSibling.getElementsByTagName('select')[0];
-                } catch (error) {
-                    var x = e.parentNode.nextElementSibling.nextElementSibling;
-                    var lookupElement = e.parentNode.nextElementSibling.getElementsByTagName('select')[0];
-                }
-               
-                let children = new Array();
-                for (let i = 0; i < x.children.length; i++) {
-                    children.push(x.children[i]);
-                }
-                if (data.length > 0){
-                    const ignoreOptions = ['iregex', 'isnull']
-                    for (let i = 0; i < lookupElement.children.length; i++) {
-                        const element = lookupElement.children[i];
-                        if (!ignoreOptions.includes(element.value))
-                        element.setAttribute('hidden', true)
-                    }
-                    if (lookupElement.value == 'isnull'){
-                        var select = createIsNull(item_value)
-                    }else{
-                        var select = document.createElement("select");
 
-                        for (let i = 0; i < data.length; i++) {
-                            const element = data[i];
-                            var optionElement = document.createElement("option");
-                            optionElement.value = `(?<!\\d)${element.id}(?!\\d)`;
-
-                            if (item_value == optionElement.value)
-                                optionElement.selected = true;
-
-                            optionElement.text = element.name;
-                            select.appendChild(optionElement);
-                        };
-                    }
-                    select.name = "data-value";
-                    select.setAttribute('id', 'id_data-value');
-                    for (let j = 0; j < children.length; j++) {
-                        x.children[0].remove();
-                    };
-                    x.insertBefore(select, x.children[x.children.length-1]);
-                }else{
-                    for (let i = 0; i < lookupElement.children.length; i++) {
-                        const element = lookupElement.children[i];
-                        element.removeAttribute('hidden')
-                    }
-                    for (let j = 0; j < children.length; j++) {
-                        x.children[0].remove();
-                    };
-                    if (lookupElement.value == 'range'){
-                        var val1 = null;
-                        var val2 = null;
-                        try {
-                            var newVal = JSON.parse(item_value)
-                            val1 = newVal[0];
-                            val2 = newVal[1];
-                            
-                        } catch (error) {}
-
-                        var div = createRange(val1, val2);
-                        x.insertBefore(div, x.children[x.children.length-1]);
-                    }else if (lookupElement.value == 'isnull') {
-                        var input = createIsNull(item_value);
-                        x.insertBefore(input, x.children[x.children.length-1])
-                    }else{
-                        var input = createOtherInput(item_value);
-                        x.insertBefore(input, x.children[x.children.length-1]);
-                    };
-                };
-            });
+    function removeButton(event) {
+        event.preventDefault();
+        event.target.parentNode.remove();
     };
-    function createRange(value1=null, value2=null){
+
+    
+    function createRange(value1 = null, value2 = null, name = "data-value", id = 'id_data-value') {
         var div = document.createElement("div");
+        var label = document.createElement("label")
+
         div.classList.add("range_input_group", "input-group");
         div.setAttribute("id", "result_range");
         var input1 = document.createElement("input");
@@ -232,12 +209,11 @@
         input2.setAttribute("type", "number");
         input3.setAttribute("type", "hidden");
         input1.setAttribute("id", "id_data-value1");
-        input1.setAttribute("form","nosubmit");
+        input1.setAttribute("form", "nosubmit");
         input2.setAttribute("id", "id_data-value2");
-        input2.setAttribute("form","nosubmit");
+        input2.setAttribute("form", "nosubmit");
         input1.name = 'xdata-value1';
         input2.name = 'xdata-value2';
-        input3.name = 'data-value';
         input1.style.width = '70px';
         input2.style.width = '70px';
         input1.onchange = changeRangeHiddenInput
@@ -248,14 +224,20 @@
             input2.setAttribute('value', value2);
         if (value1 && value2)
             input3.setAttribute('value', `[${value1}, ${value2}]`)
+        input3.name = name
+        input3.setAttribute("id", 'id_data-value');
         div.appendChild(input1);
         div.appendChild(input2);
         div.appendChild(input3);
-        return div
+        label.htmlFor = input3.id;
+        label.innerHTML = input3.id.split('-')[1].replace(/\b[a-z]/g, (x) => x.toUpperCase()) + ": ";
+        return [div, label]
     };
 
-    function createIsNull(value=null){
+    function createIsNull(value = null, name = "data-value", id = 'id_data-value') {
         var select = document.createElement("select");
+        var label = document.createElement("label")
+
         var optionYes = document.createElement("option");
         optionYes.value = 'True';
         optionYes.text = 'True';
@@ -268,25 +250,67 @@
         else
             optionNo.selected = true;
         select.appendChild(optionNo);
-        select.name = "data-value";
+        select.name = name;
         select.setAttribute('id', 'id_data-value');
-        select.style.width = "100px";
         if (value)
             select.setAttribute('value', value);
-        return select;
-        };
-        
-    function createOtherInput(value=null){
-        var input = document.createElement("input")
-        input.setAttribute("type", "text")
-        input.setAttribute("id", "id_data-value")
-        input.name = 'data-value';
-        if (value)
-            input.setAttribute('value', value);
-        return input;
+        label.htmlFor = select.id;
+        label.innerHTML = select.id.split('-')[1].replace(/\b[a-z]/g, (x) => x.toUpperCase()) + ": ";
+        return [select, label];
     };
 
-    function changeRangeHiddenInput(e){
+    function createOtherInput(value = null, name = 'data-value', id = "id_data-value") {
+        var input = document.createElement("input")
+        var label = document.createElement("label")
+        input.setAttribute("type", "text")
+        input.setAttribute("id", 'id_data-value')
+        input.name = name;
+
+        if (value)
+            input.setAttribute('value', value);
+        label.htmlFor = input.id;
+        label.innerHTML = input.id.split('-')[1].replace(/\b[a-z]/g, (x) => x.toUpperCase()) + ": ";
+        return [input, label];
+    };
+
+    function createMultiRowInput(value = null, fieldset=null, name = 'data-value-multiple') {
+        var inDiv = document.createElement('div')
+        var hiddenInput = fieldset.querySelector('.hidden-data-value-in')
+        var inHiddenVal = null;
+        if (hiddenInput == null){
+
+            inHiddenVal = document.createElement('input')
+            inHiddenVal.setAttribute("type", "hidden");
+            inHiddenVal.name = 'data-value'
+            inHiddenVal.id = 'hidden-data-value-in'
+            inHiddenVal.classList.add('hidden-data-value-in')
+        }
+        var inBtn = createAddRowBtn()
+        var inRmBtn = createRemoveRowBtn()
+        var input = document.createElement("input")
+        var label = document.createElement("label")
+        input.setAttribute("form", "nosubmit");
+        input.setAttribute("type", "text")
+        input.setAttribute("id", 'id_data-value')
+        input.name = name;
+        input.onchange = changeInHiddenInput;
+
+        if (value){
+            input.setAttribute('value', value);
+        }
+        label.htmlFor = input.id;
+        label.innerHTML = input.id.split('-')[1].replace(/\b[a-z]/g, (x) => x.toUpperCase()) + ": ";
+        if (fieldset.querySelector(`label[for='${input.id}']`) == null)
+            inDiv.appendChild(label)
+        inDiv.appendChild(input)
+        inDiv.appendChild(inBtn)
+        inDiv.appendChild(inRmBtn)
+        if (inHiddenVal != null)
+            inDiv.appendChild(inHiddenVal)        
+        return inDiv;
+    };
+
+    function changeRangeHiddenInput(e) {
         var parentChildren = e.target.parentNode.children;
         if (parentChildren[0].value == "" || parentChildren[1].value == "")
             parentChildren[2].value = null
@@ -294,22 +318,229 @@
             parentChildren[2].value = `[${parentChildren[0].value}, ${parentChildren[1].value}]`
     }
 
-    function typeField(e){
-        var value = null;
-        var x = e.target.parentNode.nextElementSibling;
-        for (let i = 0; i < x.children.length; i++) {
-            const element = x.children[i];
-            if (element.tagName == 'DIV')
-                value = element.children[2].value
-            else
-                value = element.value;
-            if (element.tagName == 'INPUT' || element.tagName == 'DIV' || element.tagName == 'SELECT'){
-                element.remove();
-            }
-            
-        };
-        valueField(e.target.parentNode.previousElementSibling.children[0], value)
+    
 
+    function createSelectField(data, value = null, name = 'data-field', id = 'id_data-field') {
+        var select = document.createElement("select");
+        var label = document.createElement("label")
+        select.appendChild(document.createElement("option"));
+        for (let i = 0; i < data.length; i++) {
+            const element = data[i];
+            var optionElement = document.createElement("option");
+            optionElement.value = element.id;
 
+            if (value == optionElement.value)
+                optionElement.selected = true;
+
+            optionElement.text = element.label;
+            select.appendChild(optionElement);
+
+        }
+        select.onchange = valueField
+        select.name = name;
+        select.setAttribute('haschanged', true);
+        select.setAttribute('id', 'id_data-field');
+        label.htmlFor = select.id;
+        label.innerHTML = select.id.split('-')[1].replace(/\b[a-z]/g, (x) => x.toUpperCase()) + ": ";
+        if (value)
+            select.setAttribute('value', value);
+        return [select, label];
+    }
+    function createOptionField(options, value = null, name = "data-value", id = 'id_data-value') {
+        var select = document.createElement("select");
+        var label = document.createElement("label")
+        for (let i = 0; i < options.length; i++) {
+            const element = options[i];
+            var optionElement = document.createElement("option");
+            optionElement.value = `(?<!\\d)${element.id}(?!\\d)`;
+
+            if (value == optionElement.value)
+                optionElement.selected = true;
+
+            optionElement.text = element.name;
+            select.appendChild(optionElement);
+
+        }
+        select.name = name;
+        select.setAttribute('id', 'id_data-value');
+        label.htmlFor = select.id;
+        label.innerHTML = select.id.split('-')[1].replace(/\b[a-z]/g, (x) => x.toUpperCase()) + ": ";
+        if (value)
+            select.setAttribute('value', value);
+        return [select, label];
+    }
+
+    function createAddRowBtn(){
+        const addRowBtn = document.createElement("input");
+        addRowBtn.name = 'addRowBtn';
+        addRowBtn.value = '+';
+        addRowBtn.type = 'button';
+        addRowBtn.classList.add( 'addRowBtn');
+        addRowBtn.onclick = addRow;
+        return addRowBtn;
     };
+
+    function createRemoveRowBtn(clonedDiv=null){
+        if (clonedDiv != null && clonedDiv.querySelector('.removeRowBtn') != null){
+            clonedDiv.querySelector('.removeRowBtn').onclick = removeRow;
+            return null;
+        }
+        var removeRowBtn = document.createElement("input");
+        removeRowBtn.name = 'removeRowBtn';
+        removeRowBtn.value = '-';
+        removeRowBtn.type = 'button';
+        removeRowBtn.classList.add('removeRowBtn');
+        removeRowBtn.onclick = removeRow;
+        return removeRowBtn;
+    };
+
+    function addRow(e, value=null){
+        var element = e;
+        if ('target' in e || e.hasAttribute('target'))
+            element = e.target;
+
+        var clonedDiv = element.parentNode.cloneNode(true);
+        clonedDiv.querySelector('input').value = value;
+        clonedDiv.querySelector('input').onchange = changeInHiddenInput;
+        clonedDiv.querySelector('.addRowBtn').onclick = addRow;
+        try {
+            clonedDiv.querySelector('#hidden-data-value-in').remove();
+        } catch (error) {
+        }
+        var removeRowBtn = createRemoveRowBtn(clonedDiv)
+        if (removeRowBtn){
+            clonedDiv.append(removeRowBtn);
+        }
+        element.parentNode.parentNode.append(clonedDiv)
+        return clonedDiv;
+    };
+
+    function removeRow(e) {
+    try {
+        e.target.parentNode.remove();
+        e.target.parentNode.querySelector('input[type=text]').onchange()
+    } catch (error) {
+        e.parentNode.remove()
+        e.parentNode.querySelector('input[type=text]').onchange()
+    }
+    };
+
+    function changeInHiddenInput(e) {
+        var hiddenValRows =  document.querySelectorAll('.hidden-data-value-in')
+        hiddenValRows.forEach(function(r){
+            var newResult = new Array();
+            var extraValRows = r.parentNode.parentNode.querySelectorAll('input[name=data-value-multiple]')
+            extraValRows.forEach(function(er){
+                newResult.push(`'${er.value}'`)
+            })
+            if (newResult.length == 1){
+                newResult.push(null)
+            }
+            r.setAttribute('value', newResult)
+        })
+    }
+
+    function typeField(e, valField, val=null) {
+        var element = null;
+        if (e.target == undefined)
+            element = e
+        else
+            element = e.target
+        var parentNodes = null
+        if (valField != null)
+            parentNodes = valField
+        else{
+            parentNodes = element.parentNode
+            valField = parentNodes.nextElementSibling
+            parentNodes.parentNode.children[3].lastChild.remove()
+        }
+        if (element.value == 'isnull') {
+            var [elem, label] = createIsNull(val)
+            valField.replaceChildren(label, elem)
+        } else if (['range', 'not_range'].includes(element.value)) {
+            var val1 = null;
+            var val2 = null;
+            try {
+                var newVal = JSON.parse(val)
+                val1 = newVal[0];
+                val2 = newVal[1];
+                
+            } catch (error) {}
+            var [elem, label] = createRange(val1, val2)
+            valField.replaceChildren(label, elem)
+        } else if (element.value == 'iregex' && prevData != null) {
+            var [elem, label] = createOptionField(prevData, val)
+            valField.replaceChildren(label, elem)
+        } else if (['in', 'not_in'].includes(element.value)) {
+            valField.querySelector('label[for="id_data-value"]').remove();
+            if (val !== null){
+                valField.querySelector('input[name=data-value]').remove();
+                val.split(',').forEach(function(p) {
+                var x =  createMultiRowInput(p.replace(/'/g, ""), parentNodes.parentNode);
+                valField.appendChild(x)
+                x.querySelector('input[type=text][name=data-value-multiple]').onchange()
+                })
+            }
+            else{
+                var inDiv = createMultiRowInput(val, parentNodes.parentNode)
+                valField.appendChild(inDiv)
+            }
+        
+        } else {
+            var [elem, label] = createOtherInput(val)
+            valField.replaceChildren(label, elem)
+        }
+    };
+
+    function valueField(e, item_value = null) {
+        let element = null;
+        let valField = null;
+        let lookupElement = null;
+
+        try {
+            value = e.target.value;
+            element = e.target
+            valField = e.target.parentNode.querySelector('*[name="data-field_lookup"][id="id_data-field_lookup"]')
+            lookupElement = e.target.parentNode.parentNode.querySelector('select[name="data-field_lookup"]')
+        } catch (error) {
+            value = e.value;
+            element = e
+            valField = e.parentNode.querySelector('*[name="data-field_lookup"][id="id_data-field_lookup"]')
+            lookupElement = e.parentNode.parentNode.querySelector('select[name="data-field_lookup"]')
+        }
+        prevData = null;
+        const url = "{% url 'admin:django_form_generator_formresponse_fetch_options' 0 %}".replace('0', value);
+        fetch(url, {
+            method: "GET",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    for (let i = 0; i < lookupElement.children.length; i++) {
+                        const el = lookupElement.children[i];
+                        if (!['iregex', 'isnull'].includes(el.value))
+                            el.setAttribute('hidden', true)
+                        else{
+                            if (item_value == null)
+                                el.selected = true
+                        }
+                    }
+                    prevData = data;
+                } else {
+                    for (let i = 0; i < lookupElement.children.length; i++) {
+                        const el = lookupElement.children[i];
+                        el.removeAttribute('hidden')
+                    }
+                }
+                try {
+                    typeField(lookupElement, valField, item_value)
+                } catch (error) {
+                    console.log(error);
+                }
+            })
+    }
+
 </script>

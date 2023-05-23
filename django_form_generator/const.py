@@ -66,6 +66,8 @@ class FieldGenre(TextChoices):
         return int(value)
 
     def eval_dropdown(self, value, **kwargs):
+        if kwargs.get('regex'):
+            return self.eval_text_input(value)
         return self.eval_number(value)
 
     def eval_date(self, value, **kwargs):
@@ -95,6 +97,8 @@ class FieldGenre(TextChoices):
             return []
 
     def eval_radio(self, value, **kwargs):
+        if kwargs.get('regex'):
+            return self.eval_text_input(value)
         return self.eval_number(value)
 
     def eval_hidden(self, value, **kwargs):

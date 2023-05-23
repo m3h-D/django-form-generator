@@ -1,7 +1,6 @@
 import uuid
-from django.db import models
 from django.http import JsonResponse
-from django.contrib import admin, messages
+from django.contrib import admin
 from django.utils.text import slugify
 from django.urls import reverse
 from django.utils.safestring import mark_safe
@@ -30,28 +29,25 @@ class FormResponseFilter(FilterMixin, FormFilter):
 
     template = "django_form_generator/filters/form_response_filter.html"
     form_class = FormResponseFilterForm
+    title = _('Search on data')
+    parameter_name = 'data'
 
-    def get_parameters(self, request) -> tuple[str, list[str], list[str], list[str], list[str]]:
-        form_id: str = request.GET.get(f'{self.field.name}-form_id')
-        field_ids: list[str] = self.clean_parameters(request.GET.getlist(f'{self.field.name}-field'))
-        field_lookups: list[str] = self.clean_parameters(request.GET.getlist(f'{self.field.name}-field_lookup'))
-        operands: list[str] = self.clean_parameters(request.GET.getlist(f'{self.field.name}-operand'))
-        values: list[str] = self.clean_parameters(request.GET.getlist(f'{self.field.name}-value'))
-        return form_id ,field_ids ,field_lookups ,operands ,values
-
+    def get_parameters(self, request) -> list[str]:
+        params = []
+        for param in self.expected_parameters():
+            url_param = self.clean_parameters(request.GET.getlist(param))
+            if param == f'{self.field.name}-form_id':
+                params.append(self.request.GET.get(param))
+            else:
+                params.append(url_param)
+        return params
+    
     def queryset(self, request, queryset):
         response_filters, response_annotations = self.get_lookups(request)
         return queryset.alias(**response_annotations).filter(response_filters)
 
-    def form_lookups(self):
-        name = self.field.name
-        return (
-            ("%s-form_id" % name, "%s__exact" % name),
-            ("%s-field" % name, "%s__exact" % name),
-            ("%s-field_lookup" % name, "%s__exact" % name),
-            ("%s-operand" % name, "%s__exact" % name),
-            ("%s-value" % name, "%s__icontains" % name),
-        )
+    def expected_parameters(self):
+        return [f'{self.field.name}-form_id', f'{self.field.name}-field', f'{self.field.name}-field_lookup', f'{self.field.name}-operand', f'{self.field.name}-value']
 
 
 class FormFieldThroughInlineAdmin(admin.TabularInline):
@@ -173,7 +169,11 @@ class FormResponseAdmin(AdminMixin, admin.ModelAdmin):
     search_fields = ['form__title', 'form__slug', 'unique_id']
     search_help_text = 'Search on Form title & Form slug & unique_id'
     readonly_fields = ['id', 'unique_id', 'created_at', 'updated_at']
-    extra_views = [('fetch_options', 'options/<int:field_id>')]
+    extra_views = [
+        ('fetch_options', 'options/<int:field_id>'),
+        ('fetch_fields', 'fields/<int:form_id>')
+        ]
+
 
     @admin.display(description="Form Title")
     def get_form_title(self, obj):
@@ -185,13 +185,18 @@ class FormResponseAdmin(AdminMixin, admin.ModelAdmin):
             f"<a href='{reverse('django_form_generator:form_response', args=(obj.unique_id, ))}'>Response</a>"
         )
     
-    def fetch_options(self, request, field_id):
+    def fetch_options(self, request, field_id: int):
         options = {}
         field = Field.objects.get(id=field_id)
         if field.genre in (const.FieldGenre.selectable_fields()):
             options = Option.objects.filter(fields__id=field_id).values('id', 'name')
         return JsonResponse(list(options), safe=False)
+    
+    def fetch_fields(self, request, form_id: int):
+        fields = Form.objects.get(id=form_id).get_fields().values('id', 'label')
+        return JsonResponse(list(fields), safe=False)
 
+        
 @admin.register(FormAPIManager)
 class FormAPIManagerAdmin(admin.ModelAdmin):
     list_display = ["id", "title", "method", "execute_time", "is_active", "cache_by", "created_at", "updated_at"]

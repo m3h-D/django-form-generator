@@ -49,3 +49,12 @@ def eval_data(context, body):
     context = template.Context(context)
     data = tmp.render(context)
     return data
+
+
+@register.filter
+def clear_form(val):
+    val.data = {}
+    val.cleaned_data = {}
+    for field in val.visible_fields():
+        field.form.data = {}
+    return val.as_p()
